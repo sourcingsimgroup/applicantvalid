@@ -195,34 +195,63 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
             <label for="f-year">Tahun</label><span class="cap-value" id="val-year"></span>
             <select id="f-year"><option value="">Semua Tahun</option></select>
           </div>
+
           <div class="capsule" data-multi="true" data-key="month">
             <button class="cap-reset" data-for="multi-month" aria-label="Reset Bulan">✕</button>
             <label>Bulan</label><span class="cap-value" id="val-month"></span><select aria-hidden="true"></select>
           </div>
+
           <div class="capsule" data-multi="true" data-key="day">
             <button class="cap-reset" data-for="multi-day" aria-label="Reset Tanggal">✕</button>
             <label>Tanggal</label><span class="cap-value" id="val-day"></span><select aria-hidden="true"></select>
           </div>
+
           <div class="capsule" data-multi="true" data-key="minat">
             <button class="cap-reset" data-for="multi-minat" aria-label="Reset Minat">✕</button>
             <label>Minat Posisi</label><span class="cap-value" id="val-minat"></span><select aria-hidden="true"></select>
           </div>
+
           <div class="capsule" data-multi="true" data-key="peng">
             <button class="cap-reset" data-for="multi-peng" aria-label="Reset Pengalaman">✕</button>
             <label>Pengalaman Terakhir</label><span class="cap-value" id="val-peng"></span><select aria-hidden="true"></select>
           </div>
+
           <div class="capsule" data-multi="true" data-key="pend">
             <button class="cap-reset" data-for="multi-pend" aria-label="Reset Pendidikan">✕</button>
             <label>Pendidikan Terakhir</label><span class="cap-value" id="val-pend"></span><select aria-hidden="true"></select>
           </div>
+
           <div class="capsule" data-multi="true" data-key="prov">
             <button class="cap-reset" data-for="multi-prov" aria-label="Reset Provinsi">✕</button>
             <label>Provinsi Minat</label><span class="cap-value" id="val-prov"></span><select aria-hidden="true"></select>
           </div>
+
           <div class="capsule" data-multi="true" data-key="kota">
             <button class="cap-reset" data-for="multi-kota" aria-label="Reset Kota">✕</button>
             <label>Kota Minat</label><span class="cap-value" id="val-kota"></span><select aria-hidden="true"></select>
           </div>
+
+          <!-- NEW: Job Parent (AI), Job Type (AJ), Cycle Hired (AB), Qualified (AE) -->
+          <div class="capsule" data-multi="true" data-key="jobparent">
+            <button class="cap-reset" data-for="multi-jobparent" aria-label="Reset Job Parent">✕</button>
+            <label>Job Parent</label><span class="cap-value" id="val-jobparent"></span><select aria-hidden="true"></select>
+          </div>
+
+          <div class="capsule" data-multi="true" data-key="jobtype">
+            <button class="cap-reset" data-for="multi-jobtype" aria-label="Reset Job Type">✕</button>
+            <label>Job Type</label><span class="cap-value" id="val-jobtype"></span><select aria-hidden="true"></select>
+          </div>
+
+          <div class="capsule" data-multi="true" data-key="cycle">
+            <button class="cap-reset" data-for="multi-cycle" aria-label="Reset Cycle Hired">✕</button>
+            <label>Cycle Hired</label><span class="cap-value" id="val-cycle"></span><select aria-hidden="true"></select>
+          </div>
+
+          <div class="capsule" data-multi="true" data-key="qualified">
+            <button class="cap-reset" data-for="multi-qualified" aria-label="Reset Qualified">✕</button>
+            <label>Qualified</label><span class="cap-value" id="val-qualified"></span><select aria-hidden="true"></select>
+          </div>
+
         </section>
       </div>
     </aside>
@@ -335,7 +364,7 @@ document.getElementById('btnLogout').addEventListener('click',()=>{
 
 /* ========= Data Source (Single) ========= */
 const SHEET_ID = "1vCqN0EPXPuss2gYWMqJaQEpSOlSsvfm8x5WupPcPgKg";
-const SHEETS_TRY = ["Responses","Form Responses 1","Sheet1"]; // fallback nama umum
+const SHEETS_TRY = ["Responses","Form Responses 1","Sheet1"];
 
 /* ===== Robust fetch ===== */
 const WRAPS = [
@@ -368,12 +397,14 @@ async function tryFetchCsv(url){
 }
 const gvizCsv = (id, sheet) => `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
 
-/* ===== Columns ===== */
+/* ===== Columns (display + export) ===== */
 const TABLE_DISPLAY_COLUMNS=[
   "NAMA LENGKAP","TANGGAL LAHIR","NOMOR WA AKTIF","NOMOR HP AKTIF","JENIS KELAMIN",
-  "PENGALAMAN KERJA TERAKHIR","DURASI PENGALAMAN KERJA","MINAT POSISI KERJA PERTAMA",
+  "PENGALAMAN KERJA TERAKHIR","DURASI PENGALAMAN KERJA",
+  "MINAT POSISI KERJA PERTAMA",
   "PENDIDIKAN TERAKHIR","KEPEMILIKAN KENDARAAN","ALAMAT DOMISILI","KECAMATAN","KELURAHAN",
-  "PROVINSI MINAT PENEMPATAN","KOTA MINAT PENEMPATAN","UPLOAD CV"
+  "PROVINSI MINAT PENEMPATAN","KOTA MINAT PENEMPATAN","UPLOAD CV",
+  /* NEW in table */ "SUMBER SOURCING","METODE SOURCING","MEDIA SOURCING","Job Parent","Job Type"
 ];
 const EXPORT_COLUMNS=[
   "TIMESTAMP","EMAIL AKTIF","SUMBER INFORMASI LOWONGAN","NAMA LENGKAP","TANGGAL LAHIR",
@@ -381,14 +412,42 @@ const EXPORT_COLUMNS=[
   "MINAT POSISI KERJA PERTAMA","MINAT POSISI KERJA KEDUA","MINAT POSISI KERJA KETIGA","PENDIDIKAN TERAKHIR",
   "NAMA SEKOLAH / NAMA UNIVERITAS","JURUSAN","KEPEMILIKAN KENDARAAN","KEPEMILIKAN SIM AKTIF",
   "ALAMAT DOMISILI","KECAMATAN","KELURAHAN","PROVINSI MINAT PENEMPATAN","KOTA MINAT PENEMPATAN",
-  "UPLOAD CV","NAMA REFERENSI","TEMPAT INFORMASI","Periode","CYCLE HIRED","USIA"
+  "UPLOAD CV",
+  /* NEW in export */ "QUALIFIED","SUMBER SOURCING","METODE SOURCING","MEDIA SOURCING","Job Parent","Job Type",
+  "NAMA REFERENSI","TEMPAT INFORMASI","Periode","CYCLE HIRED","USIA"
 ];
+
+/* ===== Filters map =====
+   Beberapa kolom pakai huruf kolom agar tetap kebaca walau nama header beda.
+   AB = Cycle Hired, AE = Qualified, AI = Job Parent, AJ = Job Type
+*/
 const FILTER_MAP={
-  ts:"TIMESTAMP",minat:"MINAT POSISI KERJA PERTAMA",minat2:"MINAT POSISI KERJA KEDUA",minat3:"MINAT POSISI KERJA KETIGA",
-  peng:"PENGALAMAN KERJA TERAKHIR",pend:"PENDIDIKAN TERAKHIR",prov:"PROVINSI MINAT PENEMPATAN",kota:"KOTA MINAT PENEMPATAN",
-  durasi:"DURASI PENGALAMAN KERJA"
+  ts:"TIMESTAMP",
+  minat:"MINAT POSISI KERJA PERTAMA",
+  minat2:"MINAT POSISI KERJA KEDUA",
+  minat3:"MINAT POSISI KERJA KETIGA",
+  peng:"PENGALAMAN KERJA TERAKHIR",
+  pend:"PENDIDIKAN TERAKHIR",
+  prov:"PROVINSI MINAT PENEMPATAN",
+  kota:"KOTA MINAT PENEMPATAN",
+  durasi:"DURASI PENGALAMAN KERJA",
+  /* NEW via letters */
+  jobparent:{letter:"AI"},
+  jobtype:{letter:"AJ"},
+  cycle:{letter:"AB"},
+  qualified:{letter:"AE"}
 };
-const ALIASES={"NAMA LENGKAP":"NAMA LENGKAP (SESUAI KTP)","TIMESTAMP":"Timestamp","UPLOAD CV":"UPLOAD CV / PORTOFOLIO"};
+
+/* ===== Aliases & Synonyms (header matching) ===== */
+const ALIASES={
+  "NAMA LENGKAP":"NAMA LENGKAP (SESUAI KTP)",
+  "TIMESTAMP":"Timestamp",
+  "UPLOAD CV":"UPLOAD CV / PORTOFOLIO",
+  "Job Parent":{letter:"AI"},
+  "Job Type":{letter:"AJ"},
+  "CYCLE HIRED":{letter:"AB"},
+  "QUALIFIED":{letter:"AE"}
+};
 const SYNONYMS={
  "NAMA LENGKAP":["NAMA LENGKAP (SESUAI KTP)","NAMA LENGKAP"],
  "TANGGAL LAHIR":["TANGGAL LAHIR","TGL LAHIR","DATE OF BIRTH","DOB"],
@@ -405,15 +464,30 @@ const SYNONYMS={
  "KELURAHAN":["KELURAHAN","DESA"],
  "PROVINSI MINAT PENEMPATAN":["PROVINSI MINAT PENEMPATAN","PROVINSI PENEMPATAN","PROVINSI"],
  "KOTA MINAT PENEMPATAN":["KOTA MINAT PENEMPATAN","KOTA PENEMPATAN","KAB/KOTA MINAT PENEMPATAN","KOTA/KAB MINAT PENEMPATAN","KOTA/KAB"],
- "UPLOAD CV":["UPLOAD CV","UPLOAD CV / PORTOFOLIO","LINK CV","URL CV"]
+ "UPLOAD CV":["UPLOAD CV","UPLOAD CV / PORTOFOLIO","LINK CV","URL CV"],
+
+ "SUMBER SOURCING":["SUMBER SOURCING","SUMBER","SOURCE","REKRUTMEN SOURCE","REFERRAL SOURCE"],
+ "METODE SOURCING":["METODE SOURCING","METODE","METHOD","SOURCING METHOD"],
+ "MEDIA SOURCING":["MEDIA SOURCING","MEDIA","CHANNEL","PLATFORM"],
+ "Job Parent":["JOB PARENT","PARENT JOB","PARENT"],
+ "Job Type":["JOB TYPE","TIPE PEKERJAAN","TIPE JOB"],
+ "CYCLE HIRED":["CYCLE HIRED","CYCLE","CYCLE_HIRED"],
+ "QUALIFIED":["QUALIFIED","KUALIFIKASI","STATUS QUALIFIED"]
 };
 
 /* ===== State ===== */
 const PAGE_SIZE=100;
 const MONTH_NAMES=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 let HEADERS=[], NAME_MAP={}, ROWS=[], page=0, COL_MAP={};
-let OPTIONS={month:[],day:[],minat:[],peng:[],pend:[],prov:[],kota:[]};
-let MULTI={month:new Set(),day:new Set(),minat:new Set(),peng:new Set(),pend:new Set(),prov:new Set(),kota:new Set(),searchJobs:new Set()};
+let OPTIONS={
+  month:[],day:[],minat:[],peng:[],pend:[],prov:[],kota:[],
+  jobparent:[], jobtype:[], cycle:[], qualified:[]
+};
+let MULTI={
+  month:new Set(),day:new Set(),minat:new Set(),peng:new Set(),pend:new Set(),prov:new Set(),kota:new Set(),
+  jobparent:new Set(), jobtype:new Set(), cycle:new Set(), qualified:new Set(),
+  searchJobs:new Set()
+};
 let JOB_OPTS=[];
 
 /* ===== Utils ===== */
@@ -423,29 +497,54 @@ const norm = s => String(s ?? "")
   .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, ' ')
   .toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
 
+/* Letter helpers (A..Z, AA..AZ, BA.. etc) */
+function letterToIndex(letter){
+  const s=String(letter).toUpperCase().trim();
+  let n=0;
+  for(let i=0;i<s.length;i++){
+    n = n*26 + (s.charCodeAt(i)-64); // A=1
+  }
+  return n-1; // zero-based
+}
+function headerByLetter(letter){ const idx=letterToIndex(letter); return HEADERS[idx] || null; }
+function getByLetter(row,letter){ const h=headerByLetter(letter); return h ? (row[h] ?? "") : ""; }
+
+/* find header by label/synonyms */
 function findHeader(label){
   if(!label) return null;
-  const candLabels = [ label, ALIASES[label] || null, ...(SYNONYMS[label] || []) ].filter(Boolean);
-  for(const lab of candLabels){
+  const cand = [ label, (typeof ALIASES[label]==='string')?ALIASES[label]:null, ...(SYNONYMS[label]||[]) ].filter(Boolean);
+  for(const lab of cand){
     const hit = NAME_MAP[norm(lab)];
     if(hit) return hit;
   }
   const want = norm(label).split(' ').filter(Boolean);
-  let best = null, bestScore = 0;
+  let best=null,scoreBest=0;
   for(const h of HEADERS){
-    const toks = norm(h).split(' ').filter(Boolean);
-    const overlap = want.filter(t => toks.includes(t)).length;
-    const score = overlap / Math.max(1, want.length);
-    if(score > bestScore){ bestScore = score; best = h; }
+    const toks=norm(h).split(' ').filter(Boolean);
+    const score= want.filter(t=>toks.includes(t)).length / Math.max(1,want.length);
+    if(score>scoreBest){scoreBest=score;best=h;}
   }
-  return (bestScore >= 0.6) ? best : null;
+  return (scoreBest>=0.6)?best:null;
 }
-const mapHeader = (name) => findHeader(name) || name;
-const get=(row,label)=>{
-  const key = COL_MAP[label] || findHeader(label) || findHeader(ALIASES[label]||'') || label;
-  return row[key] ?? "";
-};
 
+/* get value by label or alias or letter */
+function get(row,label){
+  const alias = ALIASES[label];
+  if(alias && typeof alias==='object' && alias.letter){
+    const via = getByLetter(row, alias.letter);
+    if(via!=="" && via!=null) return via;
+  }
+  const key = COL_MAP[label] || findHeader(label) || (typeof alias==='string' ? findHeader(alias) : null) || label;
+  return row[key] ?? "";
+}
+/* Generic accessor (string label or {letter:"AJ"}) */
+function val(row, spec){
+  if(typeof spec==='string') return get(row, spec);
+  if(spec && typeof spec==='object' && spec.letter) return getByLetter(row, spec.letter);
+  return "";
+}
+
+/* other utils */
 function hideLoader(){const el=$("#loader");if(!el) return;el.style.opacity="0";el.style.transition="opacity .25s ease";setTimeout(()=>{el.style.display="none";document.body.classList.add("ready");},250)}
 function showLoader(){const el=$("#loader"); if(!el) return; document.body.classList.remove('ready'); el.style.display='flex'; el.style.opacity='1';}
 function showLoaderError(msg){$("#loader-sub").textContent=msg||"Gagal memuat data."}
@@ -457,41 +556,66 @@ function computeAge(dob){const p=parseDateParts(dob); if(!p) return ""; const t=
 /* ===== Column resolver ===== */
 function buildColMap(){
   COL_MAP = {};
-  const box=document.getElementById('dsCheck');
-  if(box){ box.style.display='none'; box.innerHTML=''; }
+  const box=document.getElementById('dsCheck'); if(box){ box.style.display='none'; box.innerHTML=''; }
+
   TABLE_DISPLAY_COLUMNS.forEach(label=>{
+    // If we have alias letter, map to its runtime header name
+    const alias = ALIASES[label];
+    if(alias && typeof alias==='object' && alias.letter){
+      const h=headerByLetter(alias.letter);
+      if(h) { COL_MAP[label]=h; return; }
+    }
     const target = findHeader(label);
     if(target) COL_MAP[label] = target;
   });
+
   const unresolved = TABLE_DISPLAY_COLUMNS.filter(lbl=>!COL_MAP[lbl]);
-  if(unresolved.length && box){
-    box.style.display='block';
-    box.innerHTML = `<div style="margin-top:8px;padding:6px;border-radius:8px;background:#fff;border:1px dashed #f59e0b">
-      <b>Peringatan kolom belum cocok:</b> ${unresolved.join(", ")}
-    </div>`;
+  if(unresolved.length){
+    const box=document.getElementById('dsCheck');
+    if(box){
+      box.style.display='block';
+      box.innerHTML = `<div style="margin-top:8px;padding:6px;border-radius:8px;background:#fff;border:1px dashed #f59e0b">
+        <b>Peringatan kolom belum cocok:</b> ${unresolved.join(", ")}
+      </div>`;
+    }
   }
 }
 
 /* ===== UI builders & filters ===== */
-function buildColumns(){const row=$("#thead-row"); row.innerHTML=""; TABLE_DISPLAY_COLUMNS.forEach((label,idx)=>{const th=document.createElement("th"); th.textContent=label; if(idx===0) th.classList.add('sticky-col','col-name'); row.appendChild(th);});}
-function fillSelect(sel,values,placeholder,disable=false){sel.innerHTML="";const o0=document.createElement("option");o0.value="";o0.textContent=placeholder;sel.appendChild(o0);values.forEach(v=>{const o=document.createElement("option");o.value=v.value;o.textContent=v.label??v.value;sel.appendChild(o);});sel.disabled=disable;}
-function buildYearOptions(){const years=uniqueNumbers( ROWS.map(r=>parseDateParts(get(r,FILTER_MAP.ts))?.y).filter(Boolean) ); fillSelect($("#f-year"), years.map(y=>({value:String(y),label:String(y)})),"Semua Tahun", years.length===0);}
+function buildColumns(){
+  const row=$("#thead-row"); row.innerHTML="";
+  TABLE_DISPLAY_COLUMNS.forEach((label,idx)=>{
+    const th=document.createElement("th"); th.textContent=label;
+    if(idx===0) th.classList.add('sticky-col','col-name');
+    row.appendChild(th);
+  });
+}
+function fillSelect(sel,values,placeholder,disable=false){
+  sel.innerHTML="";
+  const o0=document.createElement("option");o0.value="";o0.textContent=placeholder;sel.appendChild(o0);
+  values.forEach(v=>{const o=document.createElement("option");o.value=v.value;o.textContent=v.label??v.value;sel.appendChild(o);});
+  sel.disabled=disable;
+}
+function buildYearOptions(){
+  const years=uniqueNumbers( ROWS.map(r=>parseDateParts(val(r,FILTER_MAP.ts))?.y).filter(Boolean) );
+  fillSelect($("#f-year"), years.map(y=>({value:String(y),label:String(y)})),"Semua Tahun", years.length===0);
+}
 const selectedYear=()=> parseInt($("#f-year").value||"0",10) || null;
 
 function rebuildMonthDayOptions(){
   const y=selectedYear();
-  const rowsY=ROWS.filter(r=>{const P=parseDateParts(get(r,FILTER_MAP.ts)); return P&&(!y||P.y===y);});
-  OPTIONS.month=uniqueNumbers(rowsY.map(r=>parseDateParts(get(r,FILTER_MAP.ts)).m)).filter(Boolean);
+  const rowsY=ROWS.filter(r=>{const P=parseDateParts(val(r,FILTER_MAP.ts)); return P&&(!y||P.y===y);});
+  OPTIONS.month=uniqueNumbers(rowsY.map(r=>parseDateParts(val(r,FILTER_MAP.ts)).m)).filter(Boolean);
   MULTI.month=new Set([...MULTI.month].filter(v=>OPTIONS.month.includes(v)));
-  const rowsYM=rowsY.filter(r=>{const P=parseDateParts(get(r,FILTER_MAP.ts)); return MULTI.month.size?MULTI.month.has(P.m):true;});
-  OPTIONS.day=uniqueNumbers(rowsYM.map(r=>parseDateParts(get(r,FILTER_MAP.ts)).d)).filter(Boolean);
+  const rowsYM=rowsY.filter(r=>{const P=parseDateParts(val(r,FILTER_MAP.ts)); return MULTI.month.size?MULTI.month.has(P.m):true;});
+  OPTIONS.day=uniqueNumbers(rowsYM.map(r=>parseDateParts(val(r,FILTER_MAP.ts)).d)).filter(Boolean);
   MULTI.day=new Set([...MULTI.day].filter(v=>OPTIONS.day.includes(v)));
 }
 function subsetByDate(){
   const y=selectedYear(),hasM=MULTI.month.size>0,hasD=MULTI.day.size>0;
   const useDate = !!(y || hasM || hasD);
   return ROWS.filter(r=>{
-    const P=parseDateParts(get(r,FILTER_MAP.ts));
+    const P=parseDateParts(val(r,FILTER_MAP.ts));
     if(!useDate) return true;
     if(!P) return false;
     if(y && P.y!==y) return false;
@@ -502,21 +626,27 @@ function subsetByDate(){
 }
 function rebuildOtherFiltersFromDate(){
   let base=subsetByDate();
-  if(MULTI.minat.size){base=base.filter(r=> MULTI.minat.has(String(get(r,FILTER_MAP.minat)||"").trim()));}
-  const sets={minat:new Set(),peng:new Set(),pend:new Set(),prov:new Set(),kota:new Set()};
-  subsetByDate().forEach(r=> sets.minat.add(String(get(r,FILTER_MAP.minat)||"").trim()) );
+  if(MULTI.minat.size){base=base.filter(r=> MULTI.minat.has(String(val(r,FILTER_MAP.minat)||"").trim()));}
+  const sets={
+    minat:new Set(),peng:new Set(),pend:new Set(),prov:new Set(),kota:new Set(),
+    jobparent:new Set(), jobtype:new Set(), cycle:new Set(), qualified:new Set()
+  };
+  subsetByDate().forEach(r=> sets.minat.add(String(val(r,FILTER_MAP.minat)||"").trim()) );
   base.forEach(r=>{
-    sets.peng.add(String(get(r,FILTER_MAP.peng)||"").trim());
-    sets.pend.add(String(get(r,FILTER_MAP.pend)||"").trim());
-    sets.prov.add(String(get(r,FILTER_MAP.prov)||"").trim());
-    sets.kota.add(String(get(r,FILTER_MAP.kota)||"").trim());
+    sets.peng.add(String(val(r,FILTER_MAP.peng)||"").trim());
+    sets.pend.add(String(val(r,FILTER_MAP.pend)||"").trim());
+    sets.prov.add(String(val(r,FILTER_MAP.prov)||"").trim());
+    sets.kota.add(String(val(r,FILTER_MAP.kota)||"").trim());
+    sets.jobparent.add(String(val(r,FILTER_MAP.jobparent)||"").trim());
+    sets.jobtype.add(String(val(r,FILTER_MAP.jobtype)||"").trim());
+    sets.cycle.add(String(val(r,FILTER_MAP.cycle)||"").trim());
+    sets.qualified.add(String(val(r,FILTER_MAP.qualified)||"").trim());
   });
   OPTIONS.minat=[...sets.minat].filter(Boolean).sort();
-  OPTIONS.peng=[...sets.peng].filter(Boolean).sort();
-  OPTIONS.pend=[...sets.pend].filter(Boolean).sort();
-  OPTIONS.prov=[...sets.prov].filter(Boolean).sort();
-  OPTIONS.kota=[...sets.kota].filter(Boolean).sort();
-  for(const k of ['peng','pend','prov','kota']) MULTI[k]=new Set([...MULTI[k]].filter(v=>OPTIONS[k].includes(v)));
+  for(const k of ['peng','pend','prov','kota','jobparent','jobtype','cycle','qualified']){
+    OPTIONS[k]=[...sets[k]].filter(Boolean).sort();
+    MULTI[k]=new Set([...MULTI[k]].filter(v=>OPTIONS[k].includes(v)));
+  }
   rebuildJobOptions();
 }
 function rebuildJobOptions(){
@@ -533,17 +663,21 @@ function rebuildJobOptions(){
 }
 function filteredRows(){
   let base=subsetByDate(); const has=k=>MULTI[k]&&MULTI[k].size>0;
-  if(has('minat')) base=base.filter(r=> MULTI.minat.has(String(get(r,FILTER_MAP.minat)||"").trim()));
-  if(has('peng'))  base=base.filter(r=> MULTI.peng.has(String(get(r,FILTER_MAP.peng)||"").trim()));
-  if(has('pend'))  base=base.filter(r=> MULTI.pend.has(String(get(r,FILTER_MAP.pend)||"").trim()));
-  if(has('prov'))  base=base.filter(r=> MULTI.prov.has(String(get(r,FILTER_MAP.prov)||"").trim()));
-  if(has('kota'))  base=base.filter(r=> MULTI.kota.has(String(get(r,FILTER_MAP.kota)||"").trim()));
+  if(has('minat')) base=base.filter(r=> MULTI.minat.has(String(val(r,FILTER_MAP.minat)||"").trim()));
+  if(has('peng'))  base=base.filter(r=> MULTI.peng.has(String(val(r,FILTER_MAP.peng)||"").trim()));
+  if(has('pend'))  base=base.filter(r=> MULTI.pend.has(String(val(r,FILTER_MAP.pend)||"").trim()));
+  if(has('prov'))  base=base.filter(r=> MULTI.prov.has(String(val(r,FILTER_MAP.prov)||"").trim()));
+  if(has('kota'))  base=base.filter(r=> MULTI.kota.has(String(val(r,FILTER_MAP.kota)||"").trim()));
+  if(has('jobparent')) base=base.filter(r=> MULTI.jobparent.has(String(val(r,FILTER_MAP.jobparent)||"").trim()));
+  if(has('jobtype'))   base=base.filter(r=> MULTI.jobtype.has(String(val(r,FILTER_MAP.jobtype)||"").trim()));
+  if(has('cycle'))     base=base.filter(r=> MULTI.cycle.has(String(val(r,FILTER_MAP.cycle)||"").trim()));
+  if(has('qualified')) base=base.filter(r=> MULTI.qualified.has(String(val(r,FILTER_MAP.qualified)||"").trim()));
   if(has('searchJobs')){
     const wanted=new Set([...MULTI.searchJobs].map(String));
     base=base.filter(r=>
-      wanted.has(String(get(r,FILTER_MAP.minat)||"").trim()) ||
-      wanted.has(String(get(r,FILTER_MAP.minat2)||"").trim()) ||
-      wanted.has(String(get(r,FILTER_MAP.minat3)||"").trim())
+      wanted.has(String(val(r,FILTER_MAP.minat)||"").trim()) ||
+      wanted.has(String(val(r,FILTER_MAP.minat2)||"").trim()) ||
+      wanted.has(String(val(r,FILTER_MAP.minat3)||"").trim())
     );
   }
   return base;
@@ -591,7 +725,8 @@ function openMultiPanel(key,anchorEl){
         const span=document.createElement('span'); span.textContent=`Pilih semua (${shown.length}) yang cocok`;
         allRow.appendChild(cb); allRow.appendChild(span);
         cb.addEventListener('change',()=>{ if(cb.checked){shown.forEach(v=>MULTI[key].add(v));} else{shown.forEach(v=>MULTI[key].delete(v));}
-          if(key==='month') rebuildMonthDayOptions(); if(['minat','month','day'].includes(key)) rebuildOtherFiltersFromDate(); recalc(false); updateCapsuleValues(); closePanel(); });
+          if(key==='month') rebuildMonthDayOptions(); if(['minat','month','day'].includes(key)) rebuildOtherFiltersFromDate(); else if(['jobparent','jobtype','cycle','qualified','peng','pend','prov','kota'].includes(key)) { rebuildOtherFiltersFromDate(); }
+          recalc(false); updateCapsuleValues(); closePanel(); });
         list.appendChild(allRow);
       }
     }else{ tip.style.display='block'; }
@@ -601,12 +736,13 @@ function openMultiPanel(key,anchorEl){
       wrap.innerHTML=`<input type="checkbox"> <span style="font-size:12px">${labelOf(v)}</span>`;
       const cb=wrap.querySelector('input'); cb.checked=MULTI[key].has(v);
       cb.addEventListener('change',()=>{ if(cb.checked) MULTI[key].add(v); else MULTI[key].delete(v);
-        if(key==='month') rebuildMonthDayOptions(); if(['minat','month','day'].includes(key)) rebuildOtherFiltersFromDate(); recalc(false); updateCapsuleValues(); closePanel(); });
+        if(key==='month') rebuildMonthDayOptions(); if(['minat','month','day'].includes(key)) rebuildOtherFiltersFromDate(); else if(['jobparent','jobtype','cycle','qualified','peng','pend','prov','kota'].includes(key)) { rebuildOtherFiltersFromDate(); }
+        recalc(false); updateCapsuleValues(); closePanel(); });
       list.appendChild(wrap);
     });
   }
   render();
-  search.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ const q=search.value.trim(); if(q.length>=minChars(key) && panelShown.length){panelShown.forEach(v=>MULTI[key].add(v)); if(key==='month') rebuildMonthDayOptions(); if(['minat','month','day'].includes(key)) rebuildOtherFiltersFromDate(); recalc(); } closePanel(); e.preventDefault(); }});
+  search.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ const q=search.value.trim(); if(q.length>=minChars(key) && panelShown.length){panelShown.forEach(v=>MULTI[key].add(v)); if(key==='month') rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalc(); } closePanel(); e.preventDefault(); }});
   search.addEventListener('input',()=>render(search.value));
   document.body.appendChild(panel); openPanel=panel;
   setTimeout(()=>{search.focus(); document.addEventListener('mousedown', onDoc, {once:true, capture:true}); },0);
@@ -643,7 +779,7 @@ function openJobSuggest(){
         list.appendChild(wrap);
       });
       if(!shown.length){ const empty=document.createElement('div'); empty.className='multi-tip'; empty.textContent='Tidak ada hasil.'; list.appendChild(empty); }
-    }else{ tip.style.display='block'; currentShown=[]; }
+    }else{ tip.display='block'; currentShown=[]; }
   }
   render(s);
   search.addEventListener('input',()=>render(search.value));
@@ -657,7 +793,7 @@ $("#jobClear").addEventListener('click',()=>{ MULTI.searchJobs.clear(); $("#jobI
 
 /* ===== Stats / render table ===== */
 function isFreshGraduate(r){
-  const dur=String(get(r,FILTER_MAP.durasi)).toLowerCase(), peng=String(get(r,FILTER_MAP.peng)).toLowerCase(), t=dur+" "+peng;
+  const dur=String(val(r,FILTER_MAP.durasi)).toLowerCase(), peng=String(val(r,FILTER_MAP.peng)).toLowerCase(), t=dur+" "+peng;
   if(/fresh\s*graduate|freshgrad|fresh\b/.test(t)) return true;
   if(/belum.*pengalaman|tanpa.*pengalaman|no.*experience/.test(t)) return true;
   const m=dur.match(/(\d+(?:[.,]\d+)?)/);
@@ -681,7 +817,7 @@ function renderTable(rows){
     const tr=document.createElement("tr");
     TABLE_DISPLAY_COLUMNS.forEach((label,idx)=>{
       const td=document.createElement("td");
-      const v=get(r,label) || get(r, ALIASES[label]||label);
+      const v=get(r,label) || (typeof ALIASES[label]==='object' && ALIASES[label].letter ? getByLetter(r, ALIASES[label].letter) : "") || get(r, ALIASES[label]||label);
       if(idx===0) td.classList.add('sticky-col','cell-name','col-name');
       if(/UPLOAD|CV/i.test(label)){
         const s=String(v||"");
@@ -772,7 +908,13 @@ document.getElementById('download').addEventListener('click',()=>{
         const fromSheet=get(r,"USIA");
         o[col]=fromSheet||computeAge(get(r,"TANGGAL LAHIR"));
       } else {
-        o[col]=get(r,col)??"";
+        // support alias letter (AB/AE/AI/AJ) if name mismatch
+        const alias = ALIASES[col];
+        if(alias && typeof alias==='object' && alias.letter){
+          o[col] = getByLetter(r, alias.letter) ?? "";
+        }else{
+          o[col]=get(r,col)??"";
+        }
       }
     });
     return o;
