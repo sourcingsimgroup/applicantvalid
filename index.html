@@ -333,40 +333,25 @@ document.getElementById('authClearBtn').addEventListener('click',()=>{
 document.getElementById('btnLogout').addEventListener('click',()=>{ localStorage.removeItem('pipeline_user'); location.reload(); });
 
 /* ========= SINGLE DATA SOURCE: Applicant Valid ========= */
-const APPLICANT_VALID_PUBHTML = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1IRy6uulUDdZtEV05QNMrse9vdqLTn_NDDoi-KgYTkEBV44HZAqAZHqgOQ6m4FwZ59kcQxHm3elhT/pubhtml?gid=1347000673&single=true";
-function pubHtmlToCsv(pubhtml){
-  // turn .../pubhtml?gid=...&single=true  -> .../pub?gid=...&single=true&output=csv
-  return pubhtml.replace("/pubhtml","/pub") + (pubhtml.includes("?") ? "&" : "?") + "output=csv";
-}
+const CSV_DIRECT = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1IRy6uulUDdZtEV05QNMrse9vdqLTn_NDDoi-KgYTkEBV44HZAqAZHqgOQ6m4FwZ59kcQxHm3elhT/pub?gid=1347000673&single=true&output=csv";
+const ISO_PROXY = "https://cors.isomorphic-git.org/"; // required for GitHub Pages
+const CSV_URL = ISO_PROXY + CSV_DIRECT;
 
-/* ===== Robust fetch (reuse) ===== */
-const WRAPS = [
-  u => u,
-  u => 'https://r.jina.ai/http://' + u.replace(/^https?:\\/\\//,''),
-  u => 'https://r.jina.ai/http/'  + u.replace(/^https?:\\/\\//,''),
-  u => 'https://cors.isomorphic-git.org/' + u
-];
-const FETCH_TIMEOUT_MS = 7500;
+/* ===== Robust fetch with timeout ===== */
+const FETCH_TIMEOUT_MS = 12000;
 function looksLikeHtml(text){ return /<\\s*html|<!doctype/i.test(text); }
 async function fetchWithTimeout(url, opt={}, ms=FETCH_TIMEOUT_MS){
   const ctrl = new AbortController();
   const id = setTimeout(()=>ctrl.abort(), ms);
-  try{ const res = await fetch(url, { ...opt, signal: ctrl.signal, cache:'no-store', redirect:'follow' }); return res; }
+  try{ const res = await fetch(url + (url.includes('?')?'&':'?') + '_=' + Date.now(), { ...opt, signal: ctrl.signal, cache:'no-store' }); return res; }
   finally{ clearTimeout(id); }
 }
-async function tryFetchCsv(url){
-  let lastErr = null;
-  for(const wrap of WRAPS){
-    const full = wrap(url) + (wrap===WRAPS[3] ? '' : (url.includes('?')?'&':'?') + '_=' + Date.now());
-    try{
-      const r = await fetchWithTimeout(full);
-      if(!r.ok) { lastErr = new Error('HTTP ' + r.status); continue; }
-      const text = await r.text();
-      if(!text || looksLikeHtml(text)) { lastErr = new Error('Bukan CSV (mungkin belum dibuka akses publik)'); continue; }
-      return text.replace(/^\\uFEFF/, '');
-    }catch(e){ lastErr = e; }
-  }
-  throw lastErr || new Error('Gagal ambil CSV');
+async function getCsvText(){
+  const res = await fetchWithTimeout(CSV_URL);
+  if(!res.ok) throw new Error("HTTP " + res.status + " ketika mengambil CSV.");
+  const text = await res.text();
+  if(!text || looksLikeHtml(text)) throw new Error("Isi yang diterima bukan CSV (cek Publish to Web & akses link).");
+  return text.replace(/^\\uFEFF/,''); // strip BOM
 }
 
 /* ===== Columns & Mappings ===== */
@@ -427,14 +412,8 @@ const norm = s => String(s ?? "")
   .replace(/[^A-Z0-9 ]+/g, ' ')
   .replace(/\\s+/g, ' ')
   .trim();
-
-function colLetterToIndex(col){ // 'A'->0, 'Z'->25, 'AA'->26, 'AI'->34, 'AJ'->35
-  let n=0; for(const ch of col.toUpperCase()){ n = n*26 + (ch.charCodeAt(0)-64); } return n-1;
-}
-function headerByColumnLabel(col){
-  const idx = colLetterToIndex(col);
-  return HEADERS[idx] || null;
-}
+function colLetterToIndex(col){ let n=0; for(const ch of col.toUpperCase()){ n = n*26 + (ch.charCodeAt(0)-64); } return n-1; }
+function headerByColumnLabel(col){ const idx = colLetterToIndex(col); return HEADERS[idx] || null; }
 
 /* ===== Header finder ===== */
 function findHeader(label){
@@ -725,8 +704,7 @@ function openMultiPanelGeneric(key,anchorEl){
         const span=document.createElement('span'); span.textContent=`Pilih semua (${shown.length}) yang cocok`;
         allRow.appendChild(cb); allRow.appendChild(span);
         cb.addEventListener('change',()=>{ if(cb.checked){shown.forEach(v=>MULTI[key].add(v));} else{shown.forEach(v=>MULTI[key].delete(v));}
-          if(key==='month') rebuildMonthDayOptions(); if(['minat','month','day'].includes(key)) rebuildOtherFiltersFromDate(); else rebuildOtherFiltersFromDate();
-          recalc(false); updateCapsuleValues(); closePanel(); });
+          if(key==='month') rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalc(false); updateCapsuleValues(); closePanel(); });
         list.appendChild(allRow);
       }
     }else{ tip.style.display='block'; }
@@ -755,15 +733,14 @@ async function parseCsvToRows(csvText){
     .map(h => String(h||'').replace(/[\\u200B-\\u200D\\uFEFF\\u00A0]/g, ' ').replace(/\\s+/g,' ').trim());
   const rows = (parsed.data||[]).map(r => { const o={}; headers.forEach(h => o[h]=r[h]); return o; });
   const MAP={}; headers.forEach(h => MAP[norm(h)] = h);
-  if(!headers.length) throw new Error('Header tidak terbaca (cek akses publik & nama sheet).');
+  if(!headers.length) throw new Error('Header tidak terbaca (cek Publish to web & nama sheet).');
   return { headers, rows, MAP };
 }
 async function loadApplicantValid(){
-  const csvUrl = pubHtmlToCsv(APPLICANT_VALID_PUBHTML);
-  const text = await tryFetchCsv(csvUrl);
+  const text = await getCsvText();
   const parsed = await parseCsvToRows(text);
   if(!parsed.rows.length) throw new Error('CSV kosong');
-  return { fields: parsed.headers, NAME_MAP: parsed.MAP, rows: parsed.rows, via:'pub:csv' };
+  return { fields: parsed.headers, NAME_MAP: parsed.MAP, rows: parsed.rows, via:'csv' };
 }
 function applyData(result){
   const box = document.getElementById('dsCheck');
@@ -813,3 +790,8 @@ document.getElementById('download').addEventListener('click',()=>{
 </script>
 </body>
 </html>
+"""
+out_path = "/mnt/data/index_applicant_valid_proxy.html"
+with open(out_path, "w", encoding="utf-8") as f:
+    f.write(html)
+out_path
