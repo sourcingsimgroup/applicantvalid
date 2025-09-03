@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Applicant Valid – Fixed Loader</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand:#3F704D; --bg:#fff; --ink:#111827; --muted:#f3f4f6; --line:#e5e7eb; --danger:#d72638; --gray:#6b7280;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,Arial,sans-serif}
+.header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;background:#222624;color:#e1e8e5;position:sticky;top:0;z-index:30}
+.header h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.2px}
+.badge{background:rgba(255,255,255,.08);padding:4px 10px;border-radius:999px;font-size:12px}
+.container{max-width:1100px;margin:16px auto;padding:0 16px 100px}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);margin-bottom:14px}
+.card h2{margin:0;padding:14px 16px;border-bottom:1px solid var(--line);font-size:16px}
+.card .content{padding:12px 16px}
+.loading{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--gray)}
+.loading .dot{width:8px;height:8px;border-radius:50%;background:var(--brand);animation:blink 1s infinite}
+.loading .dot:nth-child(2){animation-delay:.2s}
+.loading .dot:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+.error{color:var(--danger);font-weight:600}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th,.table td{border-bottom:1px solid var(--line);padding:10px 8px;text-align:left}
+.table th{background:var(--muted);font-weight:600}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;background:#f3f4f6;border:1px solid #e5e7eb;border-bottom-width:2px;border-radius:6px;padding:2px 6px;font-size:12px}
+.login-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:saturate(1.1) blur(3px);display:none;align-items:center;justify-content:center;z-index:100}
+.login-panel{width:min(420px,92vw);background:#fff;border-radius:16px;border:1px solid var(--line);box-shadow:0 6px 24px rgba(0,0,0,.12);padding:20px}
+.login-panel h3{margin:0 0 12px 0}
+.input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.row{display:flex;gap:10px;align-items:center;margin:8px 0}
+.btn{background:var(--brand);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-weight:600}
+.btn.secondary{background:#eef2f7;color:#111}
+.small{font-size:12px;color:#6b7280}
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>Applicant Valid</h1>
+    <span class="badge">Fixed Loader (CSV + CORS proxy)</span>
+  </div>
+
+  <div class="container">
+    <div class="card">
+      <h2>Status</h2>
+      <div class="content" id="status">
+        <div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> <span>Mengambil data…</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Cuplikan Data (10 baris pertama)</h2>
+      <div class="content">
+        <table class="table" id="tbl"><thead></thead><tbody></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login (persisted via localStorage) -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-panel">
+      <h3>Masuk ke THE PIPELINE</h3>
+      <div class="row"><input class="input" id="user" placeholder="Username"></div>
+      <div class="row"><input class="input" id="pass" type="password" placeholder="Password"></div>
+      <div class="row">
+        <button class="btn" id="btnLogin">Login</button>
+        <button class="btn secondary" id="btnClear">Clear Session</button>
+      </div>
+      <div class="small">Hubungi Sourcing HO untuk mendapatkan login</div>
+      <div class="small" id="loginMsg"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+  // === CONFIG ===
+  // Gunakan endpoint CSV yang sudah di-publish, dilalui via proxy CORS bawaan isomorphic-git.
+  const GID = "1347000673";
+  const CSV_ENDPOINT = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ1IRy6uulUDdZtEV05QNMrse9vdqLTn_NDDoi-KgYTkEBV44HZAqAZHqgOQ6m4FwZ59kcQxHm3elhT/pub?gid="+GID+"&single=true&output=csv";
+  const PROXY = "https://cors.isomorphic-git.org/"; // proxy bawaan
+
+  // === LOGIN PERSISTENCE ===
+  const overlay = document.getElementById('loginOverlay');
+  const btnLogin = document.getElementById('btnLogin');
+  const btnClear = document.getElementById('btnClear');
+  const msgLogin = document.getElementById('loginMsg');
+  function showLogin(){ overlay.style.display = 'flex'; }
+  function hideLogin(){ overlay.style.display = 'none'; }
+  function loggedIn(){ return !!localStorage.getItem('pipeline_login'); }
+  function doLogin(u,p){
+    // TODO: ganti dengan validasi real jika perlu. Sementara: minimal 3 huruf
+    if((u||'').length>=3 && (p||'').length>=3){
+      localStorage.setItem('pipeline_login','1');
+      hideLogin();
+      loadData(); // after login
+    }else{
+      msgLogin.textContent = "Username / password salah.";
+    }
+  }
+  function clearLogin(){
+    localStorage.removeItem('pipeline_login');
+    showLogin();
+  }
+  btnLogin && btnLogin.addEventListener('click', ()=>{
+    doLogin(document.getElementById('user').value, document.getElementById('pass').value);
+  });
+  btnClear && btnClear.addEventListener('click', clearLogin);
+
+  if(!loggedIn()) showLogin();
+
+  // === DATA LOADER ===
+  const statusEl = document.getElementById('status');
+  const tblHead = document.querySelector('#tbl thead');
+  const tblBody = document.querySelector('#tbl tbody');
+
+  async function loadData(){
+    try{
+      statusEl.innerHTML = '<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> <span>Mengambil data…</span></div>';
+      const url = PROXY + CSV_ENDPOINT;
+
+      // Pakai Papa.parse untuk unduh CSV dengan CORS via proxy
+      Papa.parse(url, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const rows = results.data || [];
+          if(!rows.length){
+            statusEl.innerHTML = '<div class="error">Tidak ada data untuk ditampilkan. Cek: status berbagi spreadsheet (Anyone with the link - Viewer), dan nama sheet <span class="kbd">Responses</span>.</div>';
+            return;
+          }
+          statusEl.innerHTML = '<div>✅ Data berhasil dimuat: <b>'+rows.length+'</b> baris.</div>';
+          // render header
+          const cols = Object.keys(rows[0]);
+          tblHead.innerHTML = '<tr>' + cols.map(c=>'<th>'+c+'</th>').join('') + '</tr>';
+          // render first 10 rows
+          const limit = Math.min(10, rows.length);
+          tblBody.innerHTML = '';
+          for(let i=0;i<limit;i++){
+            const r = rows[i];
+            const tds = cols.map(c=>'<td>'+ (r[c] ?? '') +'</td>').join('');
+            tblBody.insertAdjacentHTML('beforeend','<tr>'+tds+'</tr>');
+          }
+        },
+        error: (err) => {
+          statusEl.innerHTML = '<div class="error">Gagal memuat data (CSV). Detail: '+ (err && (err.message||err)) +'</div>';
+        }
+      });
+    }catch(e){
+      statusEl.innerHTML = '<div class="error">Gagal memuat data: '+ e.message +'</div>';
+    }
+  }
+
+  // Auto-load if already logged in
+  if(loggedIn()){ loadData(); }
+  </script>
+</body>
+</html>
