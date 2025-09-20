@@ -17,11 +17,11 @@
   --head-bg:#556B2F;
   --head-fg:#e1e8e5;
   --name-col-w:260px;
-  --male:#5DADEC; /* biru muda */
-  --female:#FF8FB1; /* pink */
+  --male:#5DADEC;
+  --female:#FF8FB1;
 }
-@media (max-width:640px){ :root{ --name-col-w:160px; } }
-*{box-sizing:border-box} html,body{width:100%;max-width:100%;overflow-x:hidden}
+*{box-sizing:border-box}
+html,body{width:100%;max-width:100%;overflow-x:hidden}
 body{margin:0;font-family:Montserrat,system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg)}
 /* ===== LOADING ===== */
 .loading-screen{position:fixed;inset:0;z-index:9999;background:#556B2F;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:24px}
@@ -36,7 +36,7 @@ body{margin:0;font-family:Montserrat,system-ui,Arial,sans-serif;color:var(--ink)
 body.ready .app{opacity:1;transform:none}
 
 /* ===== HEADER ===== */
-.header{background:var(--head-bg);color:var(--head-fg);padding:10px 16px;position:sticky;top:0;z-index:70;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.header{background:var(--head-bg);color:var(--head-fg);padding:10px 16px;position:sticky;top:0;z-index:80;box-shadow:0 2px 6px rgba(0,0,0,.08)}
 .header-inner{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap}
 .title{margin:0;font-weight:800;font-size:clamp(18px,2.2vw,28px);color:var(--head-fg)}
 .subtitle{margin:2px 0 0;font-size:11px;opacity:.9;letter-spacing:.02em;color:var(--head-fg)}
@@ -136,27 +136,25 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
 .view--dash .dash-wrap{display:block}
 .view--dash .data-wrap{display:none}
 
-/* filter row (center, 12px) */
-.dash-filters-wrap{display:flex;justify-content:center;background:#f8faf7;border-bottom:1px solid var(--line)}
+/* filter bar (center, 12px) — sticky */
+.dash-filters-wrap{position:sticky;top:56px;z-index:70;display:flex;justify-content:center;background:#f8faf7;border-bottom:1px solid var(--line)}
 .dash-filters{display:flex;gap:10px;align-items:center;padding:10px 12px;flex-wrap:wrap;max-width:1100px;width:100%;justify-content:center}
 .dfi{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 10px}
 .dfi label{font-size:12px;font-weight:800;color:#475569}
 .dfi select{font-size:12px;border:none;outline:none;background:transparent;padding:4px 0}
 
-/* hamburger mobile */
+/* hamburger mobile toggles the SAME filter bar */
 .dash-hamb{display:none;gap:8px;align-items:center;background:var(--brand);color:#fff;border:none;border-radius:12px;padding:8px 12px;font-weight:700;margin:10px auto}
 .dash-icon{position:relative;width:18px;height:12px}
 .dash-icon::before,.dash-icon::after,.dash-icon>span{content:"";position:absolute;left:0;right:0;height:2px;background:#fff;border-radius:2px}
 .dash-icon::before{top:0}.dash-icon>span{top:5px}.dash-icon::after{bottom:0}
-#dashPanel{display:block} /* terlihat default (desktop & mobile) */
-#dashPanel.closed{display:none}
 
 .dash-container{max-width:1200px;margin:16px auto;padding:0 12px}
 .dash-section{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 10px rgba(0,0,0,.05);overflow:hidden;margin-bottom:16px}
 .dash-head{background:var(--head-bg);color:var(--head-fg);padding:12px 16px;font-weight:800}
 .dash-block{padding:14px 16px}
 
-.dsum{display:grid;grid-template-columns:repeat(5,minmax(160px,1fr));gap:12px}
+.dsum{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px}
 .dcard{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:6px}
 .dcard h4{margin:0;font-size:12px;color:#334155;font-weight:800}
 .dcard .num{font-size:28px;font-weight:800;color:#111;display:flex;align-items:center;gap:8px}
@@ -176,7 +174,8 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
 @media (max-width:1000px){ .dsum{grid-template-columns:repeat(3,1fr)} }
 @media (max-width:720px){ .dsum{grid-template-columns:repeat(2,1fr)} .dbars{grid-template-columns:1fr} }
 @media (max-width:640px){
-  .dash-filters{display:none} /* di mobile, pakai hamburger */
+  .dash-filters{display:none}
+  .dash-filters.open{display:flex}
   .dash-hamb{display:flex}
 }
 </style>
@@ -226,7 +225,7 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
   </div>
 </header>
 
-<!-- ===== DATA VIEW ===== -->
+<!-- ===== DATA VIEW (original table) ===== -->
 <main class="app data-wrap">
   <div id="dsCheck" style="display:none;padding:8px 16px;font:12px/1.4 Montserrat,Arial;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;margin:12px 16px"></div>
   <div class="layout">
@@ -337,11 +336,11 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
 
 <!-- ===== DASHBOARD VIEW ===== -->
 <main class="app dash-wrap">
-  <!-- Filter strip -->
+  <!-- Filter strip (single) -->
   <div class="dash-filters-wrap">
-    <div class="dash-filters" aria-label="Dashboard Filters">
+    <div id="dashFilters" class="dash-filters" aria-label="Dashboard Filters">
       <div class="dfi">
-        <label for="df-periode">Periode (AB)</label>
+        <label for="df-periode">Periode (AA)</label>
         <select id="df-periode"><option value="">Semua</option></select>
       </div>
       <div class="dfi">
@@ -349,11 +348,10 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
         <select id="df-year"><option value="">Semua</option></select>
       </div>
     </div>
-    <button id="dashHamb" class="dash-hamb" type="button" aria-expanded="true">
+    <button id="dashHamb" class="dash-hamb" type="button" aria-expanded="false">
       <span class="dash-icon"><span></span></span><span>Filter</span>
     </button>
   </div>
-  <div id="dashPanel"><!-- dipakai hanya di mobile ketika toggle --></div>
 
   <div class="dash-container">
     <!-- Summary Applicant -->
@@ -361,9 +359,8 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
       <div class="dash-head">Summary Applicant</div>
       <div class="dash-block">
         <div class="dsum">
-          <div class="dcard"><h4>Total Applicant Valid (dedupe)</h4><div id="d-total" class="num">0</div></div>
-          <div class="dcard"><h4>Total Qualified (AE)</h4><div id="d-qualified" class="num">0</div></div>
-          <div class="dcard"><h4>Total Hired (AB)</h4><div id="d-hired" class="num">0</div></div>
+          <div class="dcard"><h4>Total Applicant Valid</h4><div id="d-total" class="num">0</div></div>
+          <div class="dcard"><h4>Total Qualified</h4><div id="d-qualified" class="num">0</div></div>
           <div class="dcard"><h4>Laki-laki</h4><div class="num"><span class="badge male">♂</span><span id="d-male">0</span></div></div>
           <div class="dcard"><h4>Perempuan</h4><div class="num"><span class="badge female">♀</span><span id="d-female">0</span></div></div>
         </div>
@@ -396,7 +393,7 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
           </div>
         </div>
         <div class="dbarlist" style="margin-top:16px">
-          <h4>Distribusi Provinsi (%)</h4>
+          <h4>Provinsi (%) — Semua</h4>
           <div id="bar-prov"></div>
         </div>
       </div>
@@ -472,7 +469,13 @@ async function tryFetchCsv(url){
 const MONTH_NAMES=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 const $=s=>document.querySelector(s);
 const norm=s=>String(s ?? "").normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[\u200B-\u200D\uFEFF\u00A0]/g,' ').toUpperCase().replace(/[^A-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
+function parseDateParts(s){
+  if(!s) return null; const d=new Date(s); if(!isNaN(d)) return {y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()};
+  const m=String(s).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if(m){let a=+m[1],b=+m[2],y=+m[3]; if(y<100) y+=2000; return (a>12)?{y,m:b,d:a}:{y,m:a,d:b};} return null;
+}
+function monthToOrder(s){ const x=String(s||'').trim().toLowerCase(); const idx=MONTH_NAMES.map(m=>m.toLowerCase()).indexOf(x); return idx>=0?idx:999; }
 
+/* ===== Columns / Aliases ===== */
 const TABLE_DISPLAY_COLUMNS=[
   "NAMA LENGKAP","TANGGAL LAHIR","NOMOR WA AKTIF","NOMOR HP AKTIF","JENIS KELAMIN",
   "PENGALAMAN KERJA TERAKHIR","DURASI PENGALAMAN KERJA",
@@ -489,7 +492,8 @@ const EXPORT_COLUMNS=[
 ];
 const ALIASES={
   "NAMA LENGKAP":"NAMA LENGKAP (SESUAI KTP)","TIMESTAMP":"Timestamp","UPLOAD CV":"UPLOAD CV / PORTOFOLIO",
-  "Job Parent":{letter:"AI"},"Job Type":{letter:"AJ"},"CYCLE HIRED":{letter:"AB"},"QUALIFIED":{letter:"AE"},"KATEGORI APP":{letter:"AD"}
+  "Job Parent":{letter:"AI"},"Job Type":{letter:"AJ"},"CYCLE HIRED":{letter:"AB"},"QUALIFIED":{letter:"AE"},"KATEGORI APP":{letter:"AD"},
+  "PERIODE":{letter:"AA"} /* untuk dashboard filter */
 };
 const SYNONYMS={
  "NAMA LENGKAP":["NAMA LENGKAP (SESUAI KTP)","NAMA LENGKAP"],
@@ -502,18 +506,14 @@ const SYNONYMS={
  "MINAT POSISI KERJA PERTAMA":["MINAT POSISI KERJA PERTAMA","MINAT POSISI PERTAMA","MINAT POSISI 1","POSISI MINAT 1","JMINAT POSISI KERJA PERTAMA"],
  "PENDIDIKAN TERAKHIR":["PENDIDIKAN TERAKHIR","PEND TERAKHIR"],
  "PROVINSI MINAT PENEMPATAN":["PROVINSI MINAT PENEMPATAN","PROVINSI PENEMPATAN","PROVINSI"],
- "SUMBER SOURCING":["SUMBER SOURCING","SUMBER","SOURCE","REFERRAL SOURCE"],
+ "SUMBER SOURCING":["SUMBER SOURCING","SUMBER","SOURCE"],
  "METODE SOURCING":["METODE SOURCING","METODE","METHOD"],
- "MEDIA SOURCING":["MEDIA SOURCING","MEDIA","CHANNEL","PLATFORM"],
- "Job Parent":["JOB PARENT","PARENT JOB","PARENT"],
- "Job Type":["JOB TYPE","TIPE PEKERJAAN","TIPE JOB"],
- "CYCLE HIRED":["CYCLE HIRED","CYCLE","CYCLE_HIRED"],
- "QUALIFIED":["QUALIFIED","KUALIFIKASI","STATUS QUALIFIED"]
+ "MEDIA SOURCING":["MEDIA SOURCING","MEDIA","CHANNEL","PLATFORM"]
 };
 const FILTER_MAP={
   ts:"TIMESTAMP", minat:"MINAT POSISI KERJA PERTAMA", minat2:"MINAT POSISI KERJA KEDUA", minat3:"MINAT POSISI KERJA KETIGA",
   peng:"PENGALAMAN KERJA TERAKHIR", pend:"PENDIDIKAN TERAKHIR", prov:"PROVINSI MINAT PENEMPATAN", kota:"KOTA MINAT PENEMPATAN",
-  durasi:"DURASI PENGALAMAN KERJA", jobparent:{letter:"AI"}, jobtype:{letter:"AJ"}, cycle:{letter:"AB"}, qualified:{letter:"AE"}, kategoriapp:{letter:"AD"}
+  durasi:"DURASI PENGALAMAN KERJA", jobparent:{letter:"AI"}, jobtype:{letter:"AJ"}, cycle:{letter:"AB"}, qualified:{letter:"AE"}, periode:{letter:"AA"}
 };
 
 let HEADERS=[], NAME_MAP={}, ROWS=[], page=0, COL_MAP={};
@@ -521,7 +521,7 @@ let OPTIONS={month:[],day:[],minat:[],peng:[],pend:[],prov:[],kota:[],jobparent:
 let MULTI={month:new Set(),day:new Set(),minat:new Set(),peng:new Set(),pend:new Set(),prov:new Set(),kota:new Set(),jobparent:new Set(),jobtype:new Set(),cycle:new Set(),qualified:new Set(),searchJobs:new Set()};
 let JOB_OPTS=[];
 
-/* ===== helpers ===== */
+/* ===== helpers for header mapping ===== */
 function letterToIndex(letter){ const s=String(letter).toUpperCase().trim(); let n=0; for(let i=0;i<s.length;i++){ n=n*26+(s.charCodeAt(i)-64); } return n-1; }
 function headerByLetter(letter){ const idx=letterToIndex(letter); return HEADERS[idx]||null; }
 function findHeader(label){
@@ -541,39 +541,41 @@ function get(row,label){
   return row[key] ?? "";
 }
 function val(row,spec){ if(typeof spec==='string') return get(row,spec); if(spec && typeof spec==='object' && spec.letter) return getByLetter(row,spec.letter); return ""; }
-function parseDateParts(s){
-  if(!s) return null; const d=new Date(s); if(!isNaN(d)) return {y:d.getFullYear(),m:d.getMonth()+1,d:d.getDate()};
-  const m=String(s).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if(m){let a=+m[1],b=+m[2],y=+m[3]; if(y<100) y+=2000; return (a>12)?{y,m:b,d:a}:{y,m:a,d:b};} return null;
-}
 
-/* ===== DATA VIEW LOGIC ===== */
+/* ===== DATA VIEW (table) logic - unchanged shortening where possible ===== */
 function buildColMap(){
   COL_MAP={};
-  const box=document.getElementById('dsCheck'); if(box){ box.style.display='none'; box.innerHTML=''; }
   TABLE_DISPLAY_COLUMNS.forEach(label=>{
     const alias=ALIASES[label];
     if(alias && typeof alias==='object' && alias.letter){ const h=headerByLetter(alias.letter); if(h){ COL_MAP[label]=h; return; } }
     const target=findHeader(label); if(target) COL_MAP[label]=target;
   });
-  const unresolved=TABLE_DISPLAY_COLUMNS.filter(lbl=>!COL_MAP[lbl]);
-  if(unresolved.length){ const box=document.getElementById('dsCheck'); if(box){ box.style.display='block'; box.innerHTML=`<div style="margin-top:8px;padding:6px;border-radius:8px;background:#fff;border:1px dashed #f59e0b"><b>Peringatan kolom belum cocok:</b> ${unresolved.join(", ")}</div>`; } }
 }
 function buildColumns(){ const row=$("#thead-row"); row.innerHTML=""; TABLE_DISPLAY_COLUMNS.forEach((label,idx)=>{ const th=document.createElement("th"); th.textContent=label; if(idx===0) th.classList.add('sticky-col','col-name'); row.appendChild(th); }); }
 function fillSelect(sel,values,placeholder,disable=false){ sel.innerHTML=""; const o0=document.createElement("option");o0.value="";o0.textContent=placeholder;sel.appendChild(o0); values.forEach(v=>{const o=document.createElement("option");o.value=v.value;o.textContent=v.label??v.value;sel.appendChild(o);}); sel.disabled=disable; }
-function buildYearOptions(){ const years=[...new Set( ROWS.map(r=>parseDateParts(val(r,FILTER_MAP.ts))?.y).filter(Boolean) )].sort((a,b)=>a-b); fillSelect($("#f-year"), years.map(y=>({value:String(y),label:String(y)})),"Semua Tahun", years.length===0); }
+function buildYearOptions(){
+  const yearsSet=new Set();
+  ROWS.forEach(r=>{
+    const ts = get(r,"TIMESTAMP") || get(r,{letter:'A'});
+    const d = parseDateParts(ts);
+    if(d && d.y) yearsSet.add(d.y);
+  });
+  const years=[...yearsSet].sort((a,b)=>a-b).map(y=>({value:String(y),label:String(y)}));
+  fillSelect($("#f-year"), years, "Semua Tahun", years.length===0);
+}
 const selectedYear=()=> parseInt($("#f-year").value||"0",10) || null;
 function rebuildMonthDayOptions(){
   const y=selectedYear();
-  const rowsY=ROWS.filter(r=>{const P=parseDateParts(val(r,FILTER_MAP.ts)); return P&&(!y||P.y===y);});
-  const months=[...new Set( rowsY.map(r=>parseDateParts(val(r,FILTER_MAP.ts)).m) )].filter(Boolean).sort((a,b)=>a-b);
+  const rowsY=ROWS.filter(r=>{const ts=get(r,"TIMESTAMP")||get(r,{letter:'A'}); const P=parseDateParts(ts); return P&&(!y||P.y===y);});
+  const months=[...new Set( rowsY.map(r=>parseDateParts(get(r,"TIMESTAMP")||get(r,{letter:'A'})).m) )].filter(Boolean).sort((a,b)=>a-b);
   OPTIONS.month=months; MULTI.month=new Set([...MULTI.month].filter(v=>OPTIONS.month.includes(v)));
-  const rowsYM=rowsY.filter(r=>{const P=parseDateParts(val(r,FILTER_MAP.ts)); return MULTI.month.size?MULTI.month.has(P.m):true;});
-  const days=[...new Set( rowsYM.map(r=>parseDateParts(val(r,FILTER_MAP.ts)).d) )].filter(Boolean).sort((a,b)=>a-b);
+  const rowsYM=rowsY.filter(r=>{const P=parseDateParts(get(r,"TIMESTAMP")||get(r,{letter:'A'})); return MULTI.month.size?MULTI.month.has(P.m):true;});
+  const days=[...new Set( rowsYM.map(r=>parseDateParts(get(r,"TIMESTAMP")||get(r,{letter:'A'})).d) )].filter(Boolean).sort((a,b)=>a-b);
   OPTIONS.day=days; MULTI.day=new Set([...MULTI.day].filter(v=>OPTIONS.day.includes(v)));
 }
 function subsetByDate(){
   const y=selectedYear(),hasM=MULTI.month.size>0,hasD=MULTI.day.size>0, use=!!(y||hasM||hasD);
-  return ROWS.filter(r=>{ const P=parseDateParts(val(r,FILTER_MAP.ts)); if(!use) return true; if(!P) return false; if(y && P.y!==y) return false; if(hasM && !MULTI.month.has(P.m)) return false; if(hasD && !MULTI.day.has(P.d)) return false; return true; });
+  return ROWS.filter(r=>{ const P=parseDateParts(get(r,"TIMESTAMP")||get(r,{letter:'A'})); if(!use) return true; if(!P) return false; if(y && P.y!==y) return false; if(hasM && !MULTI.month.has(P.m)) return false; if(hasD && !MULTI.day.has(P.d)) return false; return true; });
 }
 function rebuildOtherFiltersFromDate(){
   let base=subsetByDate(); if(MULTI.minat.size){base=base.filter(r=> MULTI.minat.has(String(val(r,FILTER_MAP.minat)||"").trim()));}
@@ -598,8 +600,8 @@ function rebuildOtherFiltersFromDate(){
 }
 function rebuildJobOptions(){
   const rows=subsetByDate(); const set=new Set();
-  rows.forEach(r=>{ "MINAT POSISI KERJA PERTAMA,MINAT POSISI KERJA KEDUA,MINAT POSISI KERJA KETIGA".split(',').forEach(col=>{ const v=String(get(r,col)||"").trim(); if(v) set.add(v); }); });
-  JOB_OPTS=[...set].sort((a,b)=>String(a).localeCompare(String(b))); updateJobSearchLabel();
+  rows.forEach(r=>{ ["MINAT POSISI KERJA PERTAMA","MINAT POSISI KERJA KEDUA","MINAT POSISI KERJA KETIGA"].forEach(col=>{ const v=String(get(r,col)||"").trim(); if(v) set.add(v); }); });
+  JOB_OPTS=[...set].sort((a,b)=>String(a).localeCompare(String(b)));
 }
 function filteredRows(){
   let base=subsetByDate(); const has=k=>MULTI[k]&&MULTI[k].size>0;
@@ -621,11 +623,6 @@ function filteredRows(){
     );
   }
   return base;
-}
-function updateJobSearchLabel(){
-  const box=$("#jobSearch"); const input=$("#jobInput"); const sel=[...MULTI.searchJobs];
-  if(sel.length){ input.placeholder = sel.length<=2? sel.join(', ') : `${sel.slice(0,2).join(', ')} +${sel.length-2}`; box.classList.add('hasSel'); }
-  else { input.placeholder = "Search by jobs…"; box.classList.remove('hasSel'); }
 }
 function isFreshGraduate_row(r){
   const dur=String(val(r,FILTER_MAP.durasi)).toLowerCase(), peng=String(val(r,FILTER_MAP.peng)).toLowerCase(), t=dur+" "+peng;
@@ -661,96 +658,19 @@ function renderTable(rows){
   });
   $("#prev").disabled=page<=0; $("#next").disabled=(start+PAGE_SIZE)>=rows.length; updatePageMini(rows.length);
 }
-function recalcData(reset=true){const rows=filteredRows(); if(reset) page=0; renderStats(rows); buildColumns(); renderTable(rows); updateCapsuleValues(); }
-function updateCapsuleValues(){
-  const sel=$("#f-year"), spanY=$("#val-year");
-  if(sel&&spanY){const has=sel.selectedIndex>0; spanY.textContent=has? sel.options[sel.selectedIndex].text:''; const btn=sel.closest('.capsule')?.querySelector('.cap-reset'); if(btn) btn.classList.toggle('show',has);}  
-  const labelOf=(key,v)=> key==='month'? MONTH_NAMES[(+v)-1]||v : v;
-  for(const key of Object.keys(MULTI)){
-    if(key==='searchJobs') continue;
-    const span=document.getElementById(`val-${key}`); if(!span) continue;
-    const arr=[...MULTI[key]]; span.textContent=arr.length? (arr.length<=2? arr.map(v=>labelOf(key,v)).join(', ') : `${labelOf(key,arr[0])}, ${labelOf(key,arr[1])} +${arr.length-2}`) : '';
-    const btn=span.closest('.capsule')?.querySelector('.cap-reset'); if(btn) btn.classList.toggle('show', !!arr.length);
-  }
-}
-
-/* events data view */
-document.addEventListener("change",(e)=>{ if(e.target.matches("#f-year")){ rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalcData(); }});
-$("#prev").addEventListener('click',()=>{const f=filteredRows(); if(page>0){page--; renderTable(f);}});
-$("#next").addEventListener('click',()=>{const f=filteredRows(); if((page+1)*100<f.length){page++; renderTable(f);}});
-document.addEventListener('click',(e)=>{
-  const btn=e.target.closest('.cap-reset'); if(!btn) return;
-  const forId=btn.getAttribute('data-for');
-  if(forId?.startsWith('multi-')){
-    const key=forId.replace('multi-','');
-    if(MULTI[key]){MULTI[key].clear(); if(key==='month') rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalcData();}
-  } else { const sel=document.getElementById(forId); if(!sel) return; sel.value=''; rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalcData(); }
-});
-const sidebarEl=$("#filterSidebar"); const toggleBtn=$("#filterToggle");
-if(toggleBtn&&sidebarEl){ toggleBtn.addEventListener('click',()=>{ const open=sidebarEl.classList.toggle('open'); toggleBtn.setAttribute('aria-expanded', open?'true':'false'); }); }
-
-/* job suggest (Data view) */
-let openPanel=null; let panelShown=[];
-const isMobile=()=>window.matchMedia('(max-width: 640px)').matches;
-function minChars(key){ if(key==='month'||key==='day') return 1; if(['jobparent','jobtype','cycle','qualified'].includes(key)) return 0; return 3; }
-function closePanel(){if(openPanel){openPanel.remove();openPanel=null;}}
-function openMultiPanel(key,anchorEl){
-  closePanel();
-  const panel=document.createElement('div'); panel.className='multi-panel'; if(isMobile()) panel.classList.add('mobile');
-  if(!isMobile()){const rect=anchorEl.getBoundingClientRect(); panel.style.left=Math.min(Math.max(8,rect.left),window.innerWidth-380)+'px'; panel.style.top=(rect.bottom+6)+'px';}
-  const required=minChars(key);
-  const search=document.createElement('input'); search.type='search'; search.className='panel-search';
-  search.placeholder = required===0 ? 'Pilih dari daftar / ketik untuk menyaring…' : `Ketik minimal ${required} huruf…`;
-  const tip=document.createElement('div'); tip.className='multi-tip';
-  tip.textContent = required===0 ? 'Pilih dari daftar atau ketik untuk menyaring.' : `Ketik minimal ${required} huruf untuk tampilkan opsi & “Pilih semua”.`;
-  const list=document.createElement('div'); panel.appendChild(search); panel.appendChild(tip); panel.appendChild(list);
-  const allOpts=(OPTIONS[key]||[]).slice(); const labelOf=v=> key==='month'? MONTH_NAMES[(+v)-1] : String(v);
-  function render(q=''){
-    list.innerHTML=''; const needle=(q||'').trim().toLowerCase(); let shown=[];
-    if(required===0 && needle.length===0){ shown=allOpts.slice(); tip.style.display='none'; }
-    else if(needle.length>=required){ shown=allOpts.filter(v=> labelOf(v).toLowerCase().includes(needle) ); tip.style.display='none'; }
-    else{ tip.style.display='block'; }
-    panelShown=shown.slice();
-    if(shown.length){
-      const allRow=document.createElement('label'); allRow.className='multi-selectall';
-      const cb=document.createElement('input'); cb.type='checkbox';
-      const allChecked=shown.every(v=>MULTI[key].has(v)), some=shown.some(v=>MULTI[key].has(v));
-      cb.checked=allChecked; if(!allChecked && some) cb.indeterminate=true;
-      const span=document.createElement('span'); span.textContent=`Pilih semua (${shown.length}) yang cocok`;
-      allRow.appendChild(cb); allRow.appendChild(span);
-      cb.addEventListener('change',()=>{ if(cb.checked){shown.forEach(v=>MULTI[key].add(v));} else{shown.forEach(v=>MULTI[key].delete(v));}
-        if(key==='month') rebuildMonthDayOptions();
-        rebuildOtherFiltersFromDate(); recalcData(false); updateCapsuleValues(); closePanel(); });
-      list.appendChild(allRow);
-    }
-    shown.sort((a,b)=> (key==='month'||key==='day')?((+a)-(+b)):String(a).localeCompare(String(b))).forEach(v=>{
-      const wrap=document.createElement('label'); wrap.className='multi-item';
-      wrap.innerHTML=`<input type="checkbox"> <span style="font-size:12px">${labelOf(v)}</span>`;
-      const cb=wrap.querySelector('input'); cb.checked=MULTI[key].has(v);
-      cb.addEventListener('change',()=>{ if(cb.checked) MULTI[key].add(v); else MULTI[key].delete(v);
-        if(key==='month') rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalcData(false); updateCapsuleValues(); closePanel(); });
-      list.appendChild(wrap);
-    });
-  }
-  render();
-  search.addEventListener('keydown',(e)=>{ if(e.key==='Enter'){ const q=search.value.trim(); if((required===0 && panelShown.length) || (q.length>=required && panelShown.length)){panelShown.forEach(v=>MULTI[key].add(v)); rebuildOtherFiltersFromDate(); recalcData(); } closePanel(); e.preventDefault(); }});
-  search.addEventListener('input',()=>render(search.value));
-  document.body.appendChild(panel); openPanel=panel;
-  setTimeout(()=>{search.focus(); document.addEventListener('mousedown', onDoc, {once:true, capture:true}); },0);
-  function onDoc(e){ if(panel.contains(e.target)||anchorEl.contains(e.target)){ document.addEventListener('mousedown', onDoc, {once:true,capture:true}); return;} closePanel(); }
-}
+function recalcData(reset=true){const rows=filteredRows(); if(reset) page=0; renderStats(rows); buildColumns(); renderTable(rows);}
 
 /* ===== DASHBOARD ===== */
 const Dash = (()=>{
   const selPeriode = document.getElementById('df-periode');
   const selYear    = document.getElementById('df-year');
   const hambBtn    = document.getElementById('dashHamb');
-  const panel      = document.getElementById('dashPanel');
+  const bar        = document.getElementById('dashFilters');
 
-  // mobile toggle: show/hide filter row clone
+  // mobile toggle: show/hide the SAME bar
   hambBtn.addEventListener('click',()=>{
-    panel.classList.toggle('closed');
-    hambBtn.setAttribute('aria-expanded', panel.classList.contains('closed')?'false':'true');
+    const open = bar.classList.toggle('open');
+    hambBtn.setAttribute('aria-expanded', open?'true':'false');
   });
 
   const setNum=(id,val)=> document.getElementById(id).textContent = Number(val||0).toLocaleString('id-ID');
@@ -770,7 +690,10 @@ const Dash = (()=>{
     const p=selPeriode.value.trim();
     const y=parseInt(selYear.value||'');
     return rows.filter(r=>{
-      const passP = p ? String(get(r,{letter:'AB'}) || get(r,"CYCLE HIRED")).trim()===p : true;
+      // Periode dari kolom AA (nama bulan)
+      const per = String(get(r,{letter:'AA'}) || get(r,"PERIODE")).trim();
+      const passP = p ? (per===p) : true;
+      // Tahun dari kolom A / Timestamp
       const ts=get(r,"TIMESTAMP") || get(r,{letter:'A'}); const dp=ts?parseDateParts(ts):null;
       const passY = y ? (dp && dp.y===y) : true;
       return passP && passY;
@@ -803,9 +726,6 @@ const Dash = (()=>{
       if(!v) return false; return !/^NO|TIDAK|0|FALSE$/i.test(v);
     }).length;
     setNum('d-qualified', qCnt);
-
-    const hCnt = dedup.filter(r=> String(get(r,{letter:'AB'}) || get(r,"CYCLE HIRED")).trim()).length;
-    setNum('d-hired', hCnt);
 
     // gender split
     let male=0,female=0;
@@ -844,7 +764,6 @@ const Dash = (()=>{
       else if(/\bS1\b|SARJANA(?! TERAPAN)/.test(kk)) eduMap.set("S1",(eduMap.get("S1")||0)+v);
       else if(/\bS2\b|MAGISTER/.test(kk)) eduMap.set("S2",(eduMap.get("S2")||0)+v);
       else if(/\bS3\b|DOKTOR/.test(kk)) eduMap.set("S3",(eduMap.get("S3")||0)+v);
-      else { /* ignore lainnya */ }
     }
     renderBars('bar-edu', toPctPairs(eduMap));
 
@@ -865,39 +784,29 @@ const Dash = (()=>{
     const metodeRaw = countBy(dedup, r=> get(r,"METODE SOURCING") || get(r,"METODE"));
     renderBars('bar-metode', toPctPairs(metodeRaw, {limitTop:10, otherLabel:"Lainnya"}));
 
-    // Provinsi (Top 10 + lainnya)
+    // Provinsi — tampilkan semua (desc)
     const provMap = countBy(dedup, r=> get(r,"PROVINSI MINAT PENEMPATAN") || get(r,"PROVINSI"));
-    renderBars('bar-prov', toPctPairs(provMap,{limitTop:10, otherLabel:"Lainnya"}));
+    const allProvPairs = [...provMap.entries()].sort((a,b)=>b[1]-a[1]);
+    const totalProv = allProvPairs.reduce((s,[_k,v])=>s+v,0)||1;
+    renderBars('bar-prov', allProvPairs.map(([k,v])=>[k, v*100/totalProv]));
   }
 
   function buildFilters(){
-    // Periode (AB)
-    const periodeSet=new Set();
-    ROWS.forEach(r=>{ const v=String(get(r,{letter:'AB'}) || get(r,"CYCLE HIRED")).trim(); if(v) periodeSet.add(v); });
-    const periode=[...periodeSet].sort((a,b)=>String(a).localeCompare(String(b)));
-    document.getElementById('df-periode').innerHTML='<option value="">Semua</option>'+periode.map(p=>`<option>${p}</option>`).join('');
+    // PERIODE dari kolom AA (nama bulan)
+    const perSet=new Set();
+    ROWS.forEach(r=>{ const v=String(get(r,{letter:'AA'}) || get(r,"PERIODE")).trim(); if(v) perSet.add(v); });
+    const perArr=[...perSet].sort((a,b)=> monthToOrder(a)-monthToOrder(b) || String(a).localeCompare(String(b)));
+    document.getElementById('df-periode').innerHTML='<option value="">Semua</option>'+perArr.map(p=>`<option>${p}</option>`).join('');
 
-    // Tahun (A)
+    // TAHUN dari kolom A / Timestamp
     const yearSet=new Set();
     ROWS.forEach(r=>{ const ts=get(r,"TIMESTAMP") || get(r,{letter:'A'}); const d=ts?parseDateParts(ts):null; if(d && d.y) yearSet.add(d.y); });
     const years=[...yearSet].sort((a,b)=>a-b);
     document.getElementById('df-year').innerHTML='<option value="">Semua</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
 
-    // Clone filter ke panel mobile
-    const panel=document.getElementById('dashPanel'); panel.innerHTML='';
-    const clone = document.querySelector('.dash-filters').cloneNode(true);
-    clone.querySelector('#df-periode').id='df-periode-m';
-    clone.querySelector('#df-year').id='df-year-m';
-    panel.appendChild(clone);
-
-    // sync mobile <-> desktop
-    const dPer=document.getElementById('df-periode'), dYear=document.getElementById('df-year');
-    const mPer=document.getElementById('df-periode-m'), mYear=document.getElementById('df-year-m');
-    const sync=(from,to)=>{ to.value=from.value; recalc(); };
-    dPer.addEventListener('change',()=>sync(dPer,mPer));
-    dYear.addEventListener('change',()=>sync(dYear,mYear));
-    mPer.addEventListener('change',()=>sync(mPer,dPer));
-    mYear.addEventListener('change',()=>sync(mYear,dYear));
+    // trigger calc on change
+    document.getElementById('df-periode').addEventListener('change',recalc);
+    document.getElementById('df-year').addEventListener('change',recalc);
   }
 
   return { buildFilters, recalc };
@@ -930,10 +839,8 @@ async function loadData(){
   throw new Error(`Gagal muat: ${lastErr ? lastErr.message : 'unknown'}`);
 }
 function applyData(result){
-  const box=document.getElementById('dsCheck'); if(box){ box.style.display='none'; box.innerHTML=''; }
   HEADERS=result.fields; NAME_MAP=result.NAME_MAP; ROWS=result.rows;
-  page=0; for(const k of Object.keys(MULTI)) MULTI[k].clear(); $("#f-year").value='';
-  buildColMap(); buildYearOptions(); rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalcData();
+  page=0; buildColMap(); buildYearOptions(); rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalcData();
   Dash.buildFilters(); Dash.recalc();
 }
 async function boot(){
@@ -974,6 +881,13 @@ document.getElementById('download').addEventListener('click',()=>{
   if(sess){ const name=USERS.find(x=>x.u===JSON.parse(sess).u)?.name || JSON.parse(sess).u; if(name){ document.getElementById('usernameLabel').textContent=name; document.getElementById('userBox').style.display='flex'; } showLoader(); boot(); }
   else { showAuth(); }
   syncRoute();
+
+  // sticky filter (mobile) toggle state reset on route
+  window.addEventListener('hashchange',()=>{ document.getElementById('dashFilters')?.classList.remove('open'); document.getElementById('dashHamb')?.setAttribute('aria-expanded','false'); });
+
+  // data-view sidebar toggle
+  const sidebarEl=document.getElementById('filterSidebar'); const toggleBtn=document.getElementById('filterToggle');
+  if(toggleBtn&&sidebarEl){ toggleBtn.addEventListener('click',()=>{ const open=sidebarEl.classList.toggle('open'); toggleBtn.setAttribute('aria-expanded', open?'true':'false'); }); }
 })();
 </script>
 </body>
