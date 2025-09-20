@@ -226,7 +226,7 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
   </div>
 </header>
 
-<!-- ===== DATA VIEW (original table) ===== -->
+<!-- ===== DATA VIEW ===== -->
 <main class="app data-wrap">
   <div id="dsCheck" style="display:none;padding:8px 16px;font:12px/1.4 Montserrat,Arial;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;margin:12px 16px"></div>
   <div class="layout">
@@ -438,7 +438,7 @@ function setView(view){
   document.body.classList.toggle('view--dash', view==='dashboard');
   navData.setAttribute('aria-current', view==='data'?'page':null);
   navDash.setAttribute('aria-current', view==='dashboard'?'page':null);
-  if(view==='dashboard' && DATA_LOADED){ Dash.recalc(); }
+  if(view==='dashboard' && DATA_LOADED){ Dash.requestRecalc(); }
 }
 function syncRoute(){
   const hash=(location.hash||'').replace('#','');
@@ -465,6 +465,15 @@ async function tryFetchCsv(url){
     }catch(e){ err=e; }
   } throw err||new Error('Gagal ambil CSV');
 }
+
+/* ========= CACHE CSV (5 menit) ========= */
+const CACHE_KEY='csv_cache_v1';
+const CACHE_TTL_MS=5*60*1000;
+function readCsvCache(){
+  try{ const j=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}'); if(j.t && (Date.now()-j.t)<CACHE_TTL_MS && typeof j.text==='string') return j.text; }catch(_){}
+  return null;
+}
+function writeCsvCache(text){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({t:Date.now(),text})); }catch(_){} }
 
 /* ========= COMMON UTILS ========= */
 const MONTH_NAMES=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
@@ -540,10 +549,8 @@ function canonicalProv(s){
   if(!s) return "";
   const up=String(s).trim().toUpperCase();
   if(PROV_ALIASES[up]) return PROV_ALIASES[up];
-  // langsung cocok bila sudah sesuai
   const exact = PROV_ORDER.find(p=>p.toUpperCase()===up);
   if(exact) return exact;
-  // fallback heuristik
   if(up.includes("YOGYA")) return "DI Yogyakarta";
   if(up.includes("RIAU") && up.includes("KEP")) return "Kepulauan Riau";
   if(up==="ACEH") return "Aceh (NAD)";
@@ -565,7 +572,7 @@ function findHeader(label){
   const want=norm(label).split(' ').filter(Boolean);
   let best=null,scoreBest=0;
   for(const h of HEADERS){ const toks=norm(h).split(' ').filter(Boolean); const score=want.filter(t=>toks.includes(t)).length/Math.max(1,want.length); if(score>scoreBest){scoreBest=score; best=h;} }
-  return (scoreBest>=0.6)?best:null;
+  return (scoreBest>=0.6)?best=null?null:best:best;
 }
 function getByLetter(row,letter){ const h=headerByLetter(letter); return h ? (row[h]??"") : ""; }
 function get(row,label){
@@ -601,7 +608,6 @@ function buildYearOptions(){
     const d = parseDateParts(ts);
     if(d && d.y) yearsSet.add(d.y);
     else{
-      // fallback: ambil dari Periode (AA) bila ada angka 4 digit
       const per = String(get(r,{letter:'AA'})||'').match(/(20\d{2}|19\d{2})/);
       if(per) yearsSet.add(+per[1]);
     }
@@ -614,7 +620,6 @@ function rebuildMonthDayOptions(){
   const y=selectedYear();
   const rowsY=ROWS.filter(r=>{
     const ts=get(r,"TIMESTAMP")||get(r,{letter:'A'}); const P=parseDateParts(ts);
-    // fallback from Periode if needed
     const yearFromPeriode = (String(get(r,{letter:'AA'})||'').match(/(20\d{2}|19\d{2})/)||[])[1];
     const yy = P?.y ?? (yearFromPeriode?+yearFromPeriode:null);
     return (!y || (yy===y));
@@ -731,7 +736,6 @@ const Dash = (()=>{
   const hambBtn    = document.getElementById('dashHamb');
   const bar        = document.getElementById('dashFilters');
 
-  // mobile toggle: show/hide the SAME bar
   hambBtn.addEventListener('click',()=>{
     const open = bar.classList.toggle('open');
     hambBtn.setAttribute('aria-expanded', open?'true':'false');
@@ -739,7 +743,7 @@ const Dash = (()=>{
 
   const setNum=(id,val)=> document.getElementById(id).textContent = Number(val||0).toLocaleString('id-ID');
 
-  function renderBars(containerId, pairs){ // [ [label, pct], ... ]
+  function renderBars(containerId, pairs){
     const cont=document.getElementById(containerId); cont.innerHTML='';
     pairs.forEach(([label,pct])=>{
       const row=document.createElement('div'); row.className='bitem';
@@ -815,7 +819,7 @@ const Dash = (()=>{
       if(/fresh\s*graduate|freshgrad|fresh\b/.test(t)) fg=true;
       if(/belum.*pengalaman|tanpa.*pengalaman|no.*experience/.test(t)) fg=true;
       const m=dur.match(/(\d+(?:[.,]\d+)?)/);
-      if(m){ const v=parseFloat(m[1].replace(',','.')); if(v===0) fg=true; if(v>0) fg = fg && false; }
+      if(m){ const v=parseFloat(m[1].replace(',','.')); if(v===0) fg=true; }
       if(!dur.trim() && (!peng.trim() || /-+|tidak|belum/.test(peng))) fg=true;
       if(fg) fresh++;
     });
@@ -833,12 +837,11 @@ const Dash = (()=>{
       else if(/\bD4\b|SARJANA TERAPAN/.test(kk)) eduMap.set("D4",(eduMap.get("D4")||0)+v);
       else if(/\bS1\b|SARJANA(?! TERAPAN)/.test(kk)) eduMap.set("S1",(eduMap.get("S1")||0)+v);
       else if(/\bS2\b|MAGISTER/.test(kk)) eduMap.set("S2",(eduMap.get("S2")||0)+v);
-      else if/\bS3\b|DOKTOR/.test(kk) eduMap.set("S3",(eduMap.get("S3")||0)+v);
+      else if (/\bS3\b|DOKTOR/.test(kk)) eduMap.set("S3",(eduMap.get("S3")||0)+v); /* ✅ fixed bug */
     }
     renderBars('bar-edu', toPctPairs(eduMap));
 
     /* ==== Demography ==== */
-    // Sumber sourcing (PSO/RO/SRO bucketed)
     const sumberMapRaw = countBy(dedup, r=> get(r,"SUMBER SOURCING") || get(r,"SUMBER") || get(r,"SOURCE"));
     const sumberNorm = new Map([["PSO",0],["RO",0],["SRO",0]]);
     for(const [k,v] of sumberMapRaw.entries()){
@@ -850,11 +853,9 @@ const Dash = (()=>{
     }
     renderBars('bar-sumber', toPctPairs(sumberNorm));
 
-    // Metode sourcing — Top 10 saja
     const metodeRaw = countBy(dedup, r=> get(r,"METODE SOURCING") || get(r,"METODE"));
     renderBars('bar-metode', toPctPairs(metodeRaw, {limitTop:10, otherLabel:"Lainnya"}));
 
-    // Provinsi — tampilkan HANYA sesuai daftar & urutan yang diminta
     const provCounts = new Map(PROV_ORDER.map(p=>[p,0]));
     dedup.forEach(r=>{
       const raw = get(r,"PROVINSI MINAT PENEMPATAN") || get(r,"PROVINSI");
@@ -866,25 +867,25 @@ const Dash = (()=>{
     renderBars('bar-prov', provPairs);
   }
 
+  let dashRAF=0;
+  function requestRecalc(){ cancelAnimationFrame(dashRAF); dashRAF=requestAnimationFrame(recalc); }
+
   function buildFilters(){
-    // PERIODE dari kolom AA (nama bulan)
     const perSet=new Set();
     ROWS.forEach(r=>{ const v=String(get(r,{letter:'AA'}) || get(r,"PERIODE")).trim(); if(v) perSet.add(v); });
     const perArr=[...perSet].sort((a,b)=> monthToOrder(a)-monthToOrder(b) || String(a).localeCompare(String(b)));
     document.getElementById('df-periode').innerHTML='<option value="">Semua</option>'+perArr.map(p=>`<option>${p}</option>`).join('');
 
-    // TAHUN dari Timestamp(A) atau fallback dari Periode (angka 4 digit)
     const yearSet=new Set();
     ROWS.forEach(r=>{ const y=detectYear(r); if(y) yearSet.add(y); });
     const years=[...yearSet].sort((a,b)=>a-b);
     document.getElementById('df-year').innerHTML='<option value="">Semua</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
 
-    // trigger calc on change
-    document.getElementById('df-periode').addEventListener('change',recalc);
-    document.getElementById('df-year').addEventListener('change',recalc);
+    document.getElementById('df-periode').addEventListener('change',requestRecalc);
+    document.getElementById('df-year').addEventListener('change',requestRecalc);
   }
 
-  return { buildFilters, recalc };
+  return { buildFilters, requestRecalc };
 })();
 
 /* ===== BOOT ===== */
@@ -892,20 +893,41 @@ function hideLoader(){const el=$("#loader");if(!el) return;el.style.opacity="0";
 function showLoader(){const el=$("#loader"); if(!el) return; document.body.classList.remove('ready'); el.style.display='flex'; el.style.opacity='1';}
 function showLoaderError(msg){$("#loader-sub").textContent=msg||"Gagal memuat data."}
 
+/* ✅ PapaParse worker + fastMode */
 async function parseCsvToRows(csvText){
-  const parsed=Papa.parse(csvText.replace(/^\uFEFF/,''), {header:true,skipEmptyLines:'greedy'});
-  const headers=(parsed.meta.fields||[]).map(h=>String(h||'').replace(/[\u200B-\u200D\uFEFF\u00A0]/g,' ').replace(/\s+/g,' ').trim());
-  const rows=(parsed.data||[]).map(r=>{const o={}; headers.forEach(h=>o[h]=r[h]); return o;});
-  const MAP={}; headers.forEach(h=>MAP[norm(h)]=h);
-  if(!headers.length) throw new Error('Header tidak terbaca (cek akses publik & nama sheet).');
-  return { headers, rows, MAP };
+  return new Promise((resolve,reject)=>{
+    Papa.parse(csvText.replace(/^\uFEFF/,''),{
+      header:true,
+      skipEmptyLines:'greedy',
+      worker:true,
+      fastMode:true,
+      complete:(parsed)=>{
+        try{
+          const headers=(parsed.meta.fields||[]).map(h=>String(h||'')
+            .replace(/[\u200B-\u200D\uFEFF\u00A0]/g,' ').replace(/\s+/g,' ').trim());
+          const rows=(parsed.data||[]).map(r=>{const o={}; headers.forEach(h=>o[h]=r[h]); return o;});
+          const MAP={}; headers.forEach(h=>MAP[norm(h)]=h);
+          if(!headers.length) throw new Error('Header tidak terbaca (cek akses publik & nama sheet).');
+          resolve({headers,rows,MAP});
+        }catch(e){reject(e);}
+      },
+      error:reject
+    });
+  });
 }
+
 async function loadData(){
+  const cached = readCsvCache();
+  if(cached){
+    const parsed = await parseCsvToRows(cached);
+    if(parsed.rows.length) return { fields: parsed.headers, NAME_MAP: parsed.MAP, rows: parsed.rows, via:'cache' };
+  }
   let lastErr=null;
   for(const name of SHEETS_TRY){
     try{
       const url=gvizCsv(SHEET_ID,name);
       const text=await tryFetchCsv(url);
+      writeCsvCache(text);
       const parsed=await parseCsvToRows(text);
       if(!parsed.rows.length){ lastErr=new Error('CSV kosong'); continue; }
       return { fields: parsed.headers, NAME_MAP: parsed.MAP, rows: parsed.rows, via:`gviz:${name}` };
@@ -916,17 +938,23 @@ async function loadData(){
 function applyData(result){
   HEADERS=result.fields; NAME_MAP=result.NAME_MAP; ROWS=result.rows;
   page=0; buildColMap(); buildYearOptions(); rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalcData();
-  Dash.buildFilters(); Dash.recalc();
+  Dash.buildFilters(); Dash.requestRecalc();
   setStickyOffset();
 }
 async function boot(){
   try{
     const sess=localStorage.getItem('pipeline_user');
-    if(!sess){ showAuth(); return; }
+    if(!sess){ showAuth(); hideLoader(); return; }
     const result=await loadData();
     if(!result.rows.length){ showLoaderError("Tidak ada data pada sheet/CSV."); hideLoader(); DATA_LOADED=true; return; }
     applyData(result); hideLoader(); DATA_LOADED=true;
-  }catch(err){ console.error(err); showLoaderError(`Gagal memuat data: ${String(err.message||err)}`); }
+  }catch(err){
+    console.error(err);
+    showLoaderError(`Gagal memuat data: ${String(err.message||err)}`);
+    hideLoader();        /* ✅ pastikan loader menutup */
+    DATA_LOADED=false;
+    showAuth();
+  }
 }
 
 /* ===== DOWNLOAD ===== */
@@ -960,7 +988,6 @@ document.getElementById('download').addEventListener('click',()=>{
   setStickyOffset();
   window.addEventListener('resize', setStickyOffset);
 
-  // data-view sidebar toggle
   const sidebarEl=document.getElementById('filterSidebar'); const toggleBtn=document.getElementById('filterToggle');
   if(toggleBtn&&sidebarEl){ toggleBtn.addEventListener('click',()=>{ const open=sidebarEl.classList.toggle('open'); toggleBtn.setAttribute('aria-expanded', open?'true':'false'); }); }
 })();
