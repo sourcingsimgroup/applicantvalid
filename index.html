@@ -4,22 +4,16 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Applicant Valid + Dashboard</title>
+
+<!-- ⚡ Percepat font: preconnect + swap -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+
 <style>
 :root{
-  --brand:#3F704D;
-  --bg:#fff;
-  --ink:#212121;
-  --muted:#f3f4f6;
-  --line:#e5e7eb;
-  --danger:#d72638;
-  --gray:#9ca3af;
-  --head-bg:#556B2F;
-  --head-fg:#e1e8e5;
-  --name-col-w:260px;
-  --male:#5DADEC;
-  --female:#FF8FB1;
-  --stickyOffset:64px; /* di-update via JS sesuai tinggi header */
+  --brand:#3F704D; --bg:#fff; --ink:#212121; --muted:#f3f4f6; --line:#e5e7eb; --danger:#d72638; --gray:#9ca3af;
+  --head-bg:#556B2F; --head-fg:#e1e8e5; --name-col-w:260px; --male:#5DADEC; --female:#FF8FB1; --stickyOffset:64px;
 }
 *{box-sizing:border-box}
 html,body{width:100%;max-width:100%;overflow-x:hidden}
@@ -137,24 +131,20 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
 .view--dash .dash-wrap{display:block}
 .view--dash .data-wrap{display:none}
 
-/* filter bar (center, 12px) — sticky */
+/* filter bar */
 .dash-filters-wrap{position:sticky;top:var(--stickyOffset);z-index:90;display:flex;justify-content:center;background:#f8faf7;border-bottom:1px solid var(--line)}
 .dash-filters{display:flex;gap:10px;align-items:center;padding:10px 12px;flex-wrap:wrap;max-width:1100px;width:100%;justify-content:center}
 .dfi{display:flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 10px}
 .dfi label{font-size:12px;font-weight:800;color:#475569}
 .dfi select{font-size:12px;border:none;outline:none;background:transparent;padding:4px 0}
-
-/* hamburger mobile toggles the SAME filter bar */
 .dash-hamb{display:none;gap:8px;align-items:center;background:var(--brand);color:#fff;border:none;border-radius:12px;padding:8px 12px;font-weight:700;margin:10px auto}
 .dash-icon{position:relative;width:18px;height:12px}
 .dash-icon::before,.dash-icon::after,.dash-icon>span{content:"";position:absolute;left:0;right:0;height:2px;background:#fff;border-radius:2px}
 .dash-icon::before{top:0}.dash-icon>span{top:5px}.dash-icon::after{bottom:0}
-
 .dash-container{max-width:1200px;margin:16px auto;padding:0 12px}
 .dash-section{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 10px rgba(0,0,0,.05);overflow:hidden;margin-bottom:16px}
 .dash-head{background:var(--head-bg);color:var(--head-fg);padding:12px 16px;font-weight:800}
 .dash-block{padding:14px 16px}
-
 .dsum{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px}
 .dcard{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:6px}
 .dcard h4{margin:0;font-size:12px;color:#334155;font-weight:800}
@@ -162,7 +152,6 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
 .badge{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9999px;color:#fff;font-weight:800;font-size:16px}
 .badge.male{background:var(--male)}
 .badge.female{background:var(--female)}
-
 .dbars{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .dbarlist{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}
 .dbarlist h4{margin:0 0 10px;font-size:13px;color:#111;font-weight:800}
@@ -171,7 +160,6 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
 .btrack{flex:1;height:10px;background:#eef2f7;border-radius:9999px;overflow:hidden;position:relative}
 .bfill{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#7fb77e,#3F704D)}
 .bpct{flex:0 0 56px;text-align:right;font-size:12px;color:#111;font-weight:700}
-
 @media (max-width:1000px){ .dsum{grid-template-columns:repeat(3,1fr)} }
 @media (max-width:720px){ .dsum{grid-template-columns:repeat(2,1fr)} .dbars{grid-template-columns:1fr} }
 @media (max-width:640px){
@@ -337,7 +325,6 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
 
 <!-- ===== DASHBOARD VIEW ===== -->
 <main class="app dash-wrap">
-  <!-- Filter strip (single) -->
   <div class="dash-filters-wrap">
     <div id="dashFilters" class="dash-filters" aria-label="Dashboard Filters">
       <div class="dfi">
@@ -355,7 +342,6 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
   </div>
 
   <div class="dash-container">
-    <!-- Summary Applicant -->
     <section class="dash-section">
       <div class="dash-head">Summary Applicant</div>
       <div class="dash-block">
@@ -371,7 +357,6 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
           <div class="dcard"><h4>Experienced</h4><div id="d-exp" class="num">0</div></div>
         </div>
 
-        <!-- Pendidikan % -->
         <div class="dbarlist" style="margin-top:12px">
           <h4>Pendidikan (%)</h4>
           <div id="bar-edu"></div>
@@ -379,7 +364,6 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
       </div>
     </section>
 
-    <!-- Demography -->
     <section class="dash-section">
       <div class="dash-head">Demography</div>
       <div class="dash-block">
@@ -402,8 +386,9 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
   </div>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- ⚡ Defer CDN supaya tidak blok render -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
 /* ========= AUTH ========= */
@@ -440,30 +425,50 @@ function setView(view){
   navDash.setAttribute('aria-current', view==='dashboard'?'page':null);
   if(view==='dashboard' && DATA_LOADED){ Dash.requestRecalc(); }
 }
-function syncRoute(){
-  const hash=(location.hash||'').replace('#','');
-  setView(hash==='dashboard'?'dashboard':'data');
-}
+function syncRoute(){ const hash=(location.hash||'').replace('#',''); setView(hash==='dashboard'?'dashboard':'data'); }
 window.addEventListener('hashchange', syncRoute);
 
 /* ========= DATA SOURCE ========= */
 const SHEET_ID="1vCqN0EPXPuss2gYWMqJaQEpSOlSsvfm8x5WupPcPgKg";
 const SHEETS_TRY=["Responses","Form Responses 1","Sheet1"];
 const gvizCsv=(id, sheet)=>`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
-const WRAPS=[u=>u, u=>'https://r.jina.ai/http://'+u.replace(/^https?:\/\//,''), u=>'https://r.jina.ai/http/'+u.replace(/^https?:\/\//,''), u=>'https://cors.isomorphic-git.org/'+u];
-const FETCH_TIMEOUT_MS=8000;
+
+/* ⚡ Mirror URLs untuk race (ambil tercepat) */
+function wrapUrls(url){
+  const clean = url.replace(/^https?:\/\//,'');
+  return [
+    url,
+    `https://r.jina.ai/http://${clean}`,
+    `https://r.jina.ai/http/${clean}`,
+    `https://cors.isomorphic-git.org/${url}`
+  ];
+}
+
+const FETCH_TIMEOUT_MS=5000; /* ⚡ dipercepat */
 const looksLikeHtml=t=>/<\s*html|<!doctype/i.test(t);
-async function fetchWithTimeout(url,opt={},ms=FETCH_TIMEOUT_MS){ const ctrl=new AbortController(); const id=setTimeout(()=>ctrl.abort(),ms); try{ return await fetch(url,{...opt,signal:ctrl.signal,cache:'no-store',redirect:'follow'});} finally{ clearTimeout(id);} }
-async function tryFetchCsv(url){
-  let err=null; for(const wrap of WRAPS){
-    const full=wrap(url)+(wrap===WRAPS[3]?'':(url.includes('?')?'&':'?')+'_='+Date.now());
-    try{
-      const r=await fetchWithTimeout(full);
-      if(!r.ok){err=new Error('HTTP '+r.status); continue;}
-      const text=await r.text(); if(!text || looksLikeHtml(text)){err=new Error('Bukan CSV / akses belum publik'); continue;}
+
+async function fetchWithTimeout(url,opt={},ms=FETCH_TIMEOUT_MS){
+  const ctrl=new AbortController(); const id=setTimeout(()=>ctrl.abort(),ms);
+  try{ return await fetch(url,{...opt,signal:ctrl.signal,cache:'no-store',redirect:'follow'});} finally{ clearTimeout(id); }
+}
+
+/* ⚡ Ambil CSV secara paralel dari semua mirror; resolve yang tercepat */
+async function raceFetchCsv(url){
+  const candidates = wrapUrls(url).map(u=>{
+    const full = u + (u.includes('?')?'&':'?') + '_=' + Date.now();
+    return fetchWithTimeout(full).then(async r=>{
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const text=await r.text();
+      if(!text || looksLikeHtml(text)) throw new Error('Bukan CSV / belum publik');
       return text.replace(/^\uFEFF/,'');
-    }catch(e){ err=e; }
-  } throw err||new Error('Gagal ambil CSV');
+    });
+  });
+  try{
+    return await Promise.any(candidates);
+  }catch(agg){
+    // Semua gagal → lempar error gabungan yang ringkas
+    throw new Error('Gagal ambil CSV dari semua mirror. Pastikan Sheet dibuka publik atau "Publish to the web".');
+  }
 }
 
 /* ========= CACHE CSV (5 menit) ========= */
@@ -572,7 +577,7 @@ function findHeader(label){
   const want=norm(label).split(' ').filter(Boolean);
   let best=null,scoreBest=0;
   for(const h of HEADERS){ const toks=norm(h).split(' ').filter(Boolean); const score=want.filter(t=>toks.includes(t)).length/Math.max(1,want.length); if(score>scoreBest){scoreBest=score; best=h;} }
-  return (scoreBest>=0.6)?best=null?null:best:best;
+  return (scoreBest>=0.6)?best:null;
 }
 function getByLetter(row,letter){ const h=headerByLetter(letter); return h ? (row[h]??"") : ""; }
 function get(row,label){
@@ -837,7 +842,7 @@ const Dash = (()=>{
       else if(/\bD4\b|SARJANA TERAPAN/.test(kk)) eduMap.set("D4",(eduMap.get("D4")||0)+v);
       else if(/\bS1\b|SARJANA(?! TERAPAN)/.test(kk)) eduMap.set("S1",(eduMap.get("S1")||0)+v);
       else if(/\bS2\b|MAGISTER/.test(kk)) eduMap.set("S2",(eduMap.get("S2")||0)+v);
-      else if (/\bS3\b|DOKTOR/.test(kk)) eduMap.set("S3",(eduMap.get("S3")||0)+v); /* ✅ fixed bug */
+      else if (/\bS3\b|DOKTOR/.test(kk)) eduMap.set("S3",(eduMap.get("S3")||0)+v);
     }
     renderBars('bar-edu', toPctPairs(eduMap));
 
@@ -897,10 +902,7 @@ function showLoaderError(msg){$("#loader-sub").textContent=msg||"Gagal memuat da
 async function parseCsvToRows(csvText){
   return new Promise((resolve,reject)=>{
     Papa.parse(csvText.replace(/^\uFEFF/,''),{
-      header:true,
-      skipEmptyLines:'greedy',
-      worker:true,
-      fastMode:true,
+      header:true, skipEmptyLines:'greedy', worker:true, fastMode:true,
       complete:(parsed)=>{
         try{
           const headers=(parsed.meta.fields||[]).map(h=>String(h||'')
@@ -926,7 +928,7 @@ async function loadData(){
   for(const name of SHEETS_TRY){
     try{
       const url=gvizCsv(SHEET_ID,name);
-      const text=await tryFetchCsv(url);
+      const text=await raceFetchCsv(url); /* ⚡ gunakan race */
       writeCsvCache(text);
       const parsed=await parseCsvToRows(text);
       if(!parsed.rows.length){ lastErr=new Error('CSV kosong'); continue; }
@@ -946,12 +948,15 @@ async function boot(){
     const sess=localStorage.getItem('pipeline_user');
     if(!sess){ showAuth(); hideLoader(); return; }
     const result=await loadData();
-    if(!result.rows.length){ showLoaderError("Tidak ada data pada sheet/CSV."); hideLoader(); DATA_LOADED=true; return; }
+    if(!result.rows.length){
+      showLoaderError("Tidak ada data pada sheet/CSV.");
+      hideLoader(); DATA_LOADED=true; return;
+    }
     applyData(result); hideLoader(); DATA_LOADED=true;
   }catch(err){
     console.error(err);
-    showLoaderError(`Gagal memuat data: ${String(err.message||err)}`);
-    hideLoader();        /* ✅ pastikan loader menutup */
+    showLoaderError(`Gagal memuat data: ${String(err.message||err)}. Pastikan Google Sheet sudah share "Anyone with the link" & "Publish to the web".`);
+    hideLoader();
     DATA_LOADED=false;
     showAuth();
   }
@@ -982,8 +987,12 @@ document.getElementById('download').addEventListener('click',()=>{
 /* ===== INIT ===== */
 (function init(){
   const sess = localStorage.getItem('pipeline_user');
-  if(sess){ const name=USERS.find(x=>x.u===JSON.parse(sess).u)?.name || JSON.parse(sess).u; if(name){ document.getElementById('usernameLabel').textContent=name; document.getElementById('userBox').style.display='flex'; } showLoader(); boot(); }
-  else { showAuth(); }
+  if(sess){
+    const parsed=JSON.parse(sess);
+    const name=USERS.find(x=>x.u===parsed.u)?.name || parsed.u;
+    if(name){ document.getElementById('usernameLabel').textContent=name; document.getElementById('userBox').style.display='flex'; }
+    showLoader(); boot();
+  } else { showAuth(); }
   syncRoute();
   setStickyOffset();
   window.addEventListener('resize', setStickyOffset);
