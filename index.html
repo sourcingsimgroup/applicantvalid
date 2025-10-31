@@ -431,8 +431,6 @@ window.addEventListener('hashchange', syncRoute);
 /* ========= DATA SOURCE ========= */
 const SHEET_ID="1vCqN0EPXPuss2gYWMqJaQEpSOlSsvfm8x5WupPcPgKg";
 const SHEETS_TRY=["Responses","Form Responses 1","Sheet1"];
-
-/* ✅ FIX: builder URL CSV gviz */
 const gvizCsv = (id, sheet) =>
   `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
 
@@ -447,15 +445,14 @@ function wrapUrls(url){
   ];
 }
 
-const FETCH_TIMEOUT_MS=5000; /* ⚡ dipercepat */
-const looksLikeHtml=t=>/<\s*html|<!doctype/i.test(t);
+const FETCH_TIMEOUT_MS=5000;
+const looksLikeHtml=t=>/<\s*html|<!doctype/i.test(t));
 
 async function fetchWithTimeout(url,opt={},ms=FETCH_TIMEOUT_MS){
   const ctrl=new AbortController(); const id=setTimeout(()=>ctrl.abort(),ms);
   try{ return await fetch(url,{...opt,signal:ctrl.signal,cache:'no-store',redirect:'follow'});} finally{ clearTimeout(id); }
 }
 
-/* ⚡ Ambil CSV secara paralel dari semua mirror; resolve yang tercepat */
 async function raceFetchCsv(url){
   const candidates = wrapUrls(url).map(u=>{
     const full = u + (u.includes('?')?'&':'?') + '_=' + Date.now();
@@ -466,12 +463,8 @@ async function raceFetchCsv(url){
       return text.replace(/^\uFEFF/,'');
     });
   });
-  try{
-    return await Promise.any(candidates);
-  }catch(agg){
-    // Semua gagal → lempar error gabungan yang ringkas
-    throw new Error('Gagal ambil CSV dari semua mirror. Pastikan Sheet dibuka publik atau "Publish to the web".');
-  }
+  try{ return await Promise.any(candidates); }
+  catch(_){ throw new Error('Gagal ambil CSV dari semua mirror. Pastikan Sheet publik / publish-to-web.'); }
 }
 
 /* ========= CACHE CSV (5 menit) ========= */
@@ -513,21 +506,50 @@ const ALIASES={
   "Job Parent":{letter:"AI"},"Job Type":{letter:"AJ"},"CYCLE HIRED":{letter:"AB"},"QUALIFIED":{letter:"AE"},
   "PERIODE":{letter:"AA"}
 };
+
+/* ====== SYNONYMS diperluas (toleran) ====== */
 const SYNONYMS={
- "NAMA LENGKAP":["NAMA LENGKAP (SESUAI KTP)","NAMA LENGKAP"],
- "TANGGAL LAHIR":["TANGGAL LAHIR","TGL LAHIR","DATE OF BIRTH","DOB"],
- "NOMOR WA AKTIF":["NOMOR WA AKTIF","NO WA AKTIF","NOMOR WHATSAPP AKTIF","WA AKTIF"],
- "NOMOR HP AKTIF":["NOMOR HP AKTIF","NO HP AKTIF","NOMOR HANDPHONE AKTIF","MOBILE"],
- "JENIS KELAMIN":["JENIS KELAMIN","GENDER"],
- "PENGALAMAN KERJA TERAKHIR":["PENGALAMAN KERJA TERAKHIR","PENGALAMAN TERAKHIR","PENGALAMAN KERJA"],
- "DURASI PENGALAMAN KERJA":["DURASI PENGALAMAN KERJA","DURASI PENGALAMAN","LAMA PENGALAMAN KERJA","DURASI PENGALAMAN (TAHUN)"],
- "MINAT POSISI KERJA PERTAMA":["MINAT POSISI KERJA PERTAMA","MINAT POSISI PERTAMA","MINAT POSISI 1","POSISI MINAT 1","JMINAT POSISI KERJA PERTAMA"],
- "PENDIDIKAN TERAKHIR":["PENDIDIKAN TERAKHIR","PEND TERAKHIR"],
- "PROVINSI MINAT PENEMPATAN":["PROVINSI MINAT PENEMPATAN","PROVINSI PENEMPATAN","PROVINSI"],
- "SUMBER SOURCING":["SUMBER SOURCING","SUMBER","SOURCE"],
- "METODE SOURCING":["METODE SOURCING","METODE","METHOD"],
- "MEDIA SOURCING":["MEDIA SOURCING","MEDIA","CHANNEL","PLATFORM"]
+  "NAMA LENGKAP":[
+    "NAMA LENGKAP (SESUAI KTP)","NAMA LENGKAP","NAMA","NAMA KANDIDAT","FULL NAME","NAMA LENGKAP SESUAI KTP"
+  ],
+  "TANGGAL LAHIR":[
+    "TANGGAL LAHIR","TGL LAHIR","DATE OF BIRTH","DOB","TANGGAL/LAHIR","TTL","TEMPAT TANGGAL LAHIR"
+  ],
+  "NOMOR WA AKTIF":[
+    "NOMOR WA AKTIF","NO WA AKTIF","NOMOR WHATSAPP AKTIF","WA AKTIF","WHATSAPP","NO WHATSAPP","NOMOR WA"
+  ],
+  "NOMOR HP AKTIF":[
+    "NOMOR HP AKTIF","NO HP AKTIF","NOMOR HANDPHONE AKTIF","MOBILE","NO HP","NO TELEPON","TELEPON","PHONE"
+  ],
+  "JENIS KELAMIN":[ "JENIS KELAMIN","GENDER","SEX" ],
+  "PENGALAMAN KERJA TERAKHIR":[
+    "PENGALAMAN KERJA TERAKHIR","PENGALAMAN TERAKHIR","PENGALAMAN KERJA","PENGALAMAN","STATUS PENGALAMAN","RIWAYAT PENGALAMAN"
+  ],
+  "DURASI PENGALAMAN KERJA":[
+    "DURASI PENGALAMAN KERJA","DURASI PENGALAMAN","LAMA PENGALAMAN KERJA","DURASI PENGALAMAN (TAHUN)","LAMANYA PENGALAMAN"
+  ],
+  "MINAT POSISI KERJA PERTAMA":[
+    "MINAT POSISI KERJA PERTAMA","MINAT POSISI PERTAMA","MINAT POSISI 1","POSISI MINAT 1","POSISI DIINGINKAN 1","JMINAT POSISI KERJA PERTAMA"
+  ],
+  "PENDIDIKAN TERAKHIR":[ "PENDIDIKAN TERAKHIR","PEND TERAKHIR","TINGKAT PENDIDIKAN","EDUKASI TERAKHIR" ],
+  "KEPEMILIKAN KENDARAAN":[ "KEPEMILIKAN KENDARAAN","PUNYA KENDARAAN","KENDARAAN" ],
+  "ALAMAT DOMISILI":[ "ALAMAT DOMISILI","DOMISILI","ALAMAT","ALAMAT SEKARANG" ],
+  "KECAMATAN":[ "KECAMATAN" ],
+  "KELURAHAN":[ "KELURAHAN","DESA" ],
+  "PROVINSI MINAT PENEMPATAN":[ "PROVINSI MINAT PENEMPATAN","PROVINSI PENEMPATAN","PROVINSI","PROVINSI MINAT" ],
+  "KOTA MINAT PENEMPATAN":[ "KOTA MINAT PENEMPATAN","KAB/KOTA MINAT PENEMPATAN","KOTA MINAT","KABUPATEN/KOTA","KOTA","KABUPATEN" ],
+  "UPLOAD CV":[ "UPLOAD CV / PORTOFOLIO","UPLOAD CV","URL CV","LINK CV","CV","PORTOFOLIO","PORTFOLIO" ],
+  "SUMBER SOURCING":[ "SUMBER SOURCING","SUMBER","SOURCE","SUMBER INFORMASI LOWONGAN" ],
+  "METODE SOURCING":[ "METODE SOURCING","METODE","METHOD","METODE REKRUTMEN","METODE PENCARIAN" ],
+  "MEDIA SOURCING":[ "MEDIA SOURCING","MEDIA","CHANNEL","PLATFORM","MEDIA REKRUTMEN" ],
+  "Job Parent":[ "JOB PARENT","PARENT JOB","KATEGORI PEKERJAAN" ],
+  "Job Type":[ "JOB TYPE","TIPE PEKERJAAN","JENIS PEKERJAAN" ],
+  "QUALIFIED":[ "QUALIFIED","KUALIFIKASI","MEET REQUIREMENT","LOLOS SCREENING" ],
+  "CYCLE HIRED":[ "CYCLE HIRED","CYCLE","SIKLUS HIRED","SICLUS HIRED","CYCLE REKRUTMEN" ],
+  "TIMESTAMP":[ "Timestamp","WAKTU INPUT","WAKTU","TANGGAL INPUT" ],
+  "PERIODE":[ "Periode","PERIODE" ]
 };
+
 const FILTER_MAP={
   ts:"TIMESTAMP", minat:"MINAT POSISI KERJA PERTAMA", minat2:"MINAT POSISI KERJA KEDUA", minat3:"MINAT POSISI KERJA KETIGA",
   peng:"PENGALAMAN KERJA TERAKHIR", pend:"PENDIDIKAN TERAKHIR", prov:"PROVINSI MINAT PENEMPATAN", kota:"KOTA MINAT PENEMPATAN",
@@ -535,16 +557,14 @@ const FILTER_MAP={
 };
 
 /* ===== Province canonical list & aliases ===== */
-const PROV_ORDER=[
-  "Aceh (NAD)","Sumatera Utara","Sumatera Selatan","Sumatera Barat","Bengkulu","Riau","Kepulauan Riau","Jambi","Lampung","Bangka Belitung",
+const PROV_ORDER=[ "Aceh (NAD)","Sumatera Utara","Sumatera Selatan","Sumatera Barat","Bengkulu","Riau","Kepulauan Riau","Jambi","Lampung","Bangka Belitung",
   "Kalimantan Barat","Kalimantan Timur","Kalimantan Selatan","Kalimantan Tengah","Kalimantan Utara",
   "Banten","DKI Jakarta","Jawa Barat","Jawa Tengah","DI Yogyakarta","Jawa Timur","Bali",
   "Nusa Tenggara Timur (NTT)","Nusa Tenggara Barat (NTB)",
   "Gorontalo","Sulawesi Barat","Sulawesi Tengah","Sulawesi Utara","Sulawesi Tenggara","Sulawesi Selatan",
   "Maluku Utara","Maluku","Papua Barat","Papua","Papua Tengah","Papua Pegunungan","Papua Selatan","Papua Barat Daya"
 ];
-const PROV_ALIASES={
-  "ACEH":"Aceh (NAD)","NANGGROE ACEH DARUSSALAM":"Aceh (NAD)","NAD":"Aceh (NAD)",
+const PROV_ALIASES={ "ACEH":"Aceh (NAD)","NANGGROE ACEH DARUSSALAM":"Aceh (NAD)","NAD":"Aceh (NAD)",
   "KEPULAUAN RIAU":"Kepulauan Riau","KEPRI":"Kepulauan Riau",
   "D I YOGYAKARTA":"DI Yogyakarta","D.I. YOGYAKARTA":"DI Yogyakarta","DAERAH ISTIMEWA YOGYAKARTA":"DI Yogyakarta",
   "NUSA TENGGARA BARAT":"Nusa Tenggara Barat (NTB)","NTB":"Nusa Tenggara Barat (NTB)",
@@ -573,23 +593,35 @@ let JOB_OPTS=[];
 /* ===== helpers for header mapping ===== */
 function letterToIndex(letter){ const s=String(letter).toUpperCase().trim(); let n=0; for(let i=0;i<s.length;i++){ n=n*26+(s.charCodeAt(i)-64); } return n-1; }
 function headerByLetter(letter){ const idx=letterToIndex(letter); return HEADERS[idx]||null; }
+
+/* ✅ findHeader robust (Jaccard + substring bonus) */
 function findHeader(label){
   if(!label) return null;
-  const cand=[ label, (typeof ALIASES[label]==='string')?ALIASES[label]:null, ...(SYNONYMS[label]||[]) ].filter(Boolean);
-  for(const lab of cand){ const hit=NAME_MAP[norm(lab)]; if(hit) return hit; }
-  const want=norm(label).split(' ').filter(Boolean);
-  let best=null,scoreBest=0;
-  for(const h of HEADERS){ const toks=norm(h).split(' ').filter(Boolean); const score=want.filter(t=>toks.includes(t)).length/Math.max(1,want.length); if(score>scoreBest){scoreBest=score; best=h;} }
-  return (scoreBest>=0.6)?best:null;
+
+  const base = [label];
+  const alias = ALIASES[label];
+  if (typeof alias === 'string') base.push(alias);
+  if (SYNONYMS[label]) base.push(...SYNONYMS[label]);
+
+  const wantTokens = new Set(norm(base[0]).split(' ').filter(Boolean));
+
+  for(const cand of base){
+    const hit = NAME_MAP[norm(cand)];
+    if(hit) return hit;
+  }
+
+  let best=null, bestScore=0;
+  for(const h of HEADERS){
+    const H = norm(h);
+    const haveTokens = new Set(H.split(' ').filter(Boolean));
+    const inter = [...wantTokens].filter(t=>haveTokens.has(t)).length;
+    const uni = new Set([...wantTokens, ...haveTokens]).size || 1;
+    let score = inter / uni;
+    if (H.includes(norm(label)) || norm(label).includes(H)) score += 0.3;
+    if (score > bestScore){ best = h; bestScore = score; }
+  }
+  return bestScore >= 0.4 ? best : null;
 }
-function getByLetter(row,letter){ const h=headerByLetter(letter); return h ? (row[h]??"") : ""; }
-function get(row,label){
-  const alias=ALIASES[label];
-  if(alias && typeof alias==='object' && alias.letter){ const via=getByLetter(row,alias.letter); if(via!=="" && via!=null) return via; }
-  const key=COL_MAP[label] || findHeader(label) || (typeof alias==='string'?findHeader(alias):null) || label;
-  return row[key] ?? "";
-}
-function val(row,spec){ if(typeof spec==='string') return get(row,spec); if(spec && typeof spec==='object' && spec.letter) return getByLetter(row,spec.letter); return ""; }
 
 /* ===== sticky offset helper ===== */
 function setStickyOffset(){
@@ -599,16 +631,40 @@ function setStickyOffset(){
 }
 
 /* ===== DATA VIEW (table) ===== */
+/* ✅ buildColMap lebih forgiving + console.table */
 function buildColMap(){
   COL_MAP={};
-  TABLE_DISPLAY_COLUMNS.forEach(label=>{
+  for (const label of TABLE_DISPLAY_COLUMNS){
     const alias=ALIASES[label];
-    if(alias && typeof alias==='object' && alias.letter){ const h=headerByLetter(alias.letter); if(h){ COL_MAP[label]=h; return; } }
-    const target=findHeader(label); if(target) COL_MAP[label]=target;
+    if(alias && typeof alias==='object' && alias.letter){
+      const h=headerByLetter(alias.letter);
+      if(h){ COL_MAP[label]=h; continue; }
+    }
+    let hit = findHeader(label);
+    if(hit){ COL_MAP[label]=hit; continue; }
+    const tokens = norm(label).split(' ').filter(Boolean);
+    const cand = HEADERS.find(h=> tokens.some(t=> norm(h).includes(t)));
+    if(cand) COL_MAP[label]=cand;
+  }
+  try{
+    const summary = Object.fromEntries(TABLE_DISPLAY_COLUMNS.map(k=>[k, COL_MAP[k] || '(tidak ketemu)']));
+    console.table(summary);
+  }catch(_){}
+}
+
+function buildColumns(){
+  const row=document.getElementById("thead-row"); row.innerHTML="";
+  TABLE_DISPLAY_COLUMNS.forEach((label,idx)=>{
+    const th=document.createElement("th"); th.textContent=label;
+    if(idx===0) th.classList.add('sticky-col','col-name'); row.appendChild(th);
   });
 }
-function buildColumns(){ const row=$("#thead-row"); row.innerHTML=""; TABLE_DISPLAY_COLUMNS.forEach((label,idx)=>{ const th=document.createElement("th"); th.textContent=label; if(idx===0) th.classList.add('sticky-col','col-name'); row.appendChild(th); }); }
-function fillSelect(sel,values,placeholder,disable=false){ sel.innerHTML=""; const o0=document.createElement("option");o0.value="";o0.textContent=placeholder;sel.appendChild(o0); values.forEach(v=>{const o=document.createElement("option");o.value=v.value;o.textContent=v.label??v.value;sel.appendChild(o);}); sel.disabled=disable; }
+function fillSelect(sel,values,placeholder,disable=false){
+  sel.innerHTML="";
+  const o0=document.createElement("option");o0.value="";o0.textContent=placeholder;sel.appendChild(o0);
+  values.forEach(v=>{const o=document.createElement("option");o.value=v.value;o.textContent=v.label??v.value;sel.appendChild(o);});
+  sel.disabled=disable;
+}
 function buildYearOptions(){
   const yearsSet=new Set();
   ROWS.forEach(r=>{
@@ -621,9 +677,21 @@ function buildYearOptions(){
     }
   });
   const years=[...yearsSet].sort((a,b)=>a-b).map(y=>({value:String(y),label:String(y)}));
-  fillSelect($("#f-year"), years, "Semua Tahun", years.length===0);
+  fillSelect(document.getElementById("f-year"), years, "Semua Tahun", years.length===0);
 }
-const selectedYear=()=> parseInt($("#f-year").value||"0",10) || null;
+const selectedYear=()=> parseInt(document.getElementById("f-year").value||"0",10) || null;
+
+function getByLetter(row,letter){ const h=headerByLetter(letter); return h ? (row[h]??"") : ""; }
+function get(row,label){
+  const alias=ALIASES[label];
+  if(alias && typeof alias==='object' && alias.letter){
+    const via=getByLetter(row,alias.letter); if(via!=="" && via!=null) return via;
+  }
+  const key=COL_MAP[label] || findHeader(label) || (typeof alias==='string'?findHeader(alias):null) || label;
+  return row[key] ?? "";
+}
+function val(row,spec){ if(typeof spec==='string') return get(row,spec); if(spec && typeof spec==='object' && spec.letter) return getByLetter(row,spec.letter); return ""; }
+
 function rebuildMonthDayOptions(){
   const y=selectedYear();
   const rowsY=ROWS.filter(r=>{
@@ -711,15 +779,22 @@ function isFreshGraduate_row(r){
 }
 function renderStats(rows){
   const total=rows.length; let fresh=0; rows.forEach(r=>{if(isFreshGraduate_row(r)) fresh++;});
-  $("#stat-total").textContent=total.toLocaleString('id-ID');
-  $("#stat-fresh").textContent=fresh.toLocaleString('id-ID');
-  $("#stat-exp").textContent=(total-fresh).toLocaleString('id-ID');
+  document.getElementById("stat-total").textContent=total.toLocaleString('id-ID');
+  document.getElementById("stat-fresh").textContent=fresh.toLocaleString('id-ID');
+  document.getElementById("stat-exp").textContent=(total-fresh).toLocaleString('id-ID');
 }
-function updatePageMini(total){const pages=Math.max(1,Math.ceil(total/100)); const el=$("#pageMini"); if(el) el.textContent=`${page+1} of ${pages} halaman`;}
-function showTable(show){ $("#grid").style.display = show?'table':'none'; $("#empty").style.display = show?'none':'block'; }
+function updatePageMini(total){
+  const pages=Math.max(1,Math.ceil(total/100));
+  document.getElementById("pageMini").textContent=`${page+1} of ${pages} halaman`;
+}
+function showTable(show){
+  document.getElementById("grid").style.display = show?'table':'none';
+  document.getElementById("empty").style.display = show?'none':'block';
+}
 function renderTable(rows){
-  showTable(rows.length>0); if(!rows.length){ $("#tbody").innerHTML=''; updatePageMini(1); return; }
-  const PAGE_SIZE=100, start=page*PAGE_SIZE, slice=rows.slice(start,start+PAGE_SIZE); const tbody=$("#tbody"); tbody.innerHTML="";
+  showTable(rows.length>0); if(!rows.length){ document.getElementById("tbody").innerHTML=''; updatePageMini(1); return; }
+  const PAGE_SIZE=100, start=page*PAGE_SIZE, slice=rows.slice(start,start+PAGE_SIZE);
+  const tbody=document.getElementById("tbody"); tbody.innerHTML="";
   slice.forEach(r=>{
     const tr=document.createElement("tr");
     TABLE_DISPLAY_COLUMNS.forEach((label,idx)=>{
@@ -733,7 +808,9 @@ function renderTable(rows){
     });
     tbody.appendChild(tr);
   });
-  $("#prev").disabled=page<=0; $("#next").disabled=(start+PAGE_SIZE)>=rows.length; updatePageMini(rows.length);
+  document.getElementById("prev").disabled=page<=0;
+  document.getElementById("next").disabled=(start+PAGE_SIZE)>=rows.length;
+  updatePageMini(rows.length);
 }
 function recalcData(reset=true){const rows=filteredRows(); if(reset) page=0; renderStats(rows); buildColumns(); renderTable(rows);}
 
@@ -877,7 +954,6 @@ const Dash = (()=>{
 
   let dashRAF=0;
   function requestRecalc(){ cancelAnimationFrame(dashRAF); dashRAF=requestAnimationFrame(recalc); }
-
   function buildFilters(){
     const perSet=new Set();
     ROWS.forEach(r=>{ const v=String(get(r,{letter:'AA'}) || get(r,"PERIODE")).trim(); if(v) perSet.add(v); });
@@ -892,16 +968,14 @@ const Dash = (()=>{
     document.getElementById('df-periode').addEventListener('change',requestRecalc);
     document.getElementById('df-year').addEventListener('change',requestRecalc);
   }
-
   return { buildFilters, requestRecalc };
 })();
 
 /* ===== BOOT ===== */
-function hideLoader(){const el=$("#loader");if(!el) return;el.style.opacity="0";el.style.transition="opacity .25s ease";setTimeout(()=>{el.style.display="none";document.body.classList.add("ready");},250)}
-function showLoader(){const el=$("#loader"); if(!el) return; document.body.classList.remove('ready'); el.style.display='flex'; el.style.opacity='1';}
-function showLoaderError(msg){$("#loader-sub").textContent=msg||"Gagal memuat data."}
+function hideLoader(){const el=document.getElementById("loader");if(!el) return;el.style.opacity="0";el.style.transition="opacity .25s ease";setTimeout(()=>{el.style.display="none";document.body.classList.add("ready");},250)}
+function showLoader(){const el=document.getElementById("loader"); if(!el) return; document.body.classList.remove('ready'); el.style.display='flex'; el.style.opacity='1';}
+function showLoaderError(msg){document.getElementById("loader-sub").textContent=msg||"Gagal memuat data."}
 
-/* ✅ PapaParse worker + fastMode */
 async function parseCsvToRows(csvText){
   return new Promise((resolve,reject)=>{
     Papa.parse(csvText.replace(/^\uFEFF/,''),{
@@ -931,7 +1005,7 @@ async function loadData(){
   for(const name of SHEETS_TRY){
     try{
       const url=gvizCsv(SHEET_ID,name);
-      const text=await raceFetchCsv(url); /* ⚡ gunakan race */
+      const text=await raceFetchCsv(url);
       writeCsvCache(text);
       const parsed=await parseCsvToRows(text);
       if(!parsed.rows.length){ lastErr=new Error('CSV kosong'); continue; }
@@ -955,16 +1029,13 @@ async function boot(){
     if(!sess){ showAuth(); hideLoader(); return; }
     const result=await loadData();
     if(!result.rows.length){
-      showLoaderError("Tidak ada data pada sheet/CSV.");
-      hideLoader(); DATA_LOADED=true; return;
+      showLoaderError("Tidak ada data pada sheet/CSV."); hideLoader(); DATA_LOADED=true; return;
     }
     applyData(result); hideLoader(); DATA_LOADED=true;
   }catch(err){
     console.error(err);
-    showLoaderError(`Gagal memuat data: ${String(err.message||err)}. Pastikan Google Sheet sudah share "Anyone with the link" & "Publish to the web".`);
-    hideLoader();
-    DATA_LOADED=false;
-    showAuth();
+    showLoaderError(`Gagal memuat data: ${String(err.message||err)}. Pastikan Google Sheet share "Anyone with the link" & "Publish to the web".`);
+    hideLoader(); DATA_LOADED=false; showAuth();
   }
 }
 
@@ -1006,11 +1077,9 @@ document.getElementById('download').addEventListener('click',()=>{
   const sidebarEl=document.getElementById('filterSidebar'); const toggleBtn=document.getElementById('filterToggle');
   if(toggleBtn&&sidebarEl){ toggleBtn.addEventListener('click',()=>{ const open=sidebarEl.classList.toggle('open'); toggleBtn.setAttribute('aria-expanded', open?'true':'false'); }); }
 
-  // Navigasi tombol pager
   document.getElementById('prev').addEventListener('click',()=>{ if(page>0){ page--; recalcData(false); } });
   document.getElementById('next').addEventListener('click',()=>{ page++; recalcData(false); });
 
-  // Login otomatis jika sudah ada session
   const user=localStorage.getItem('pipeline_user');
   if(!user){ showAuth(); } else { onLogin(true); }
 })();
