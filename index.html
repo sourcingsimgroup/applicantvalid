@@ -431,7 +431,10 @@ window.addEventListener('hashchange', syncRoute);
 /* ========= DATA SOURCE ========= */
 const SHEET_ID="1vCqN0EPXPuss2gYWMqJaQEpSOlSsvfm8x5WupPcPgKg";
 const SHEETS_TRY=["Responses","Form Responses 1","Sheet1"];
-const gvizCsv=(id, sheet)=>https://docs.google.com/spreadsheets/d/1vCqN0EPXPuss2gYWMqJaQEpSOlSsvfm8x5WupPcPgKg/gviz/tq?tqx=out:csv&sheet=Responses;
+
+/* ✅ FIX: builder URL CSV gviz */
+const gvizCsv = (id, sheet) =>
+  `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
 
 /* ⚡ Mirror URLs untuk race (ambil tercepat) */
 function wrapUrls(url){
@@ -933,7 +936,10 @@ async function loadData(){
       const parsed=await parseCsvToRows(text);
       if(!parsed.rows.length){ lastErr=new Error('CSV kosong'); continue; }
       return { fields: parsed.headers, NAME_MAP: parsed.MAP, rows: parsed.rows, via:`gviz:${name}` };
-    }catch(e){ lastErr=e; }
+    }catch(e){
+      console.error('Fetch failed for sheet:', name, e);
+      lastErr=e;
+    }
   }
   throw new Error(`Gagal muat: ${lastErr ? lastErr.message : 'unknown'}`);
 }
@@ -999,6 +1005,14 @@ document.getElementById('download').addEventListener('click',()=>{
 
   const sidebarEl=document.getElementById('filterSidebar'); const toggleBtn=document.getElementById('filterToggle');
   if(toggleBtn&&sidebarEl){ toggleBtn.addEventListener('click',()=>{ const open=sidebarEl.classList.toggle('open'); toggleBtn.setAttribute('aria-expanded', open?'true':'false'); }); }
+
+  // Navigasi tombol pager
+  document.getElementById('prev').addEventListener('click',()=>{ if(page>0){ page--; recalcData(false); } });
+  document.getElementById('next').addEventListener('click',()=>{ page++; recalcData(false); });
+
+  // Login otomatis jika sudah ada session
+  const user=localStorage.getItem('pipeline_user');
+  if(!user){ showAuth(); } else { onLogin(true); }
 })();
 </script>
 </body>
