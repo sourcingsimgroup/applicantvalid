@@ -382,7 +382,6 @@ tbody td.sticky-col{z-index:25;background:#fff;box-shadow:4px 0 0 0 #fff,6px 0 8
   </div>
 </main>
 
-<!-- ⚡ Defer CDN supaya tidak blok render -->
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
@@ -424,57 +423,50 @@ function setView(view){
 function syncRoute(){ const hash=(location.hash||'').replace('#',''); setView(hash==='dashboard'?'dashboard':'data'); }
 window.addEventListener('hashchange', syncRoute);
 
-/* ========= DATA SOURCE ========= */
+/* ========= DATA SOURCE (FAST) ========= */
 const SHEET_ID="1vCqN0EPXPuss2gYWMqJaQEpSOlSsvfm8x5WupPcPgKg";
 const SHEETS_TRY=["Responses","Form Responses 1","Sheet1"];
-const gvizCsv=(id, sheet)=>`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
 
-/* ⚡ Mirror URLs untuk race (ambil tercepat) */
-function wrapUrls(url){
-  const clean = url.replace(/^https?:\/\//,'');
-  return [
-    url,
-    `https://r.jina.ai/http://${clean}`,
-    `https://r.jina.ai/http/${clean}`,
-    `https://cors.isomorphic-git.org/${url}`
-  ];
+/* Prioritas URL (paling cepat -> paling lambat) */
+const pubCsv = (id, sheet)=>`https://docs.google.com/spreadsheets/d/${id}/pub?single=true&output=csv&sheet=${encodeURIComponent(sheet)}`;
+const gvizCsv = (id, sheet)=>`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`;
+
+function buildCsvCandidates(id, sheet){
+  const list=[ pubCsv(id,sheet), gvizCsv(id,sheet) ];
+  return list.flatMap(url=>{
+    const clean=url.replace(/^https?:\/\//,'');
+    return [ url, `https://r.jina.ai/http://${clean}`, `https://cors.isomorphic-git.org/${url}` ];
+  });
 }
 
-const FETCH_TIMEOUT_MS=15000;
+const FETCH_TIMEOUT_MS=4000; /* agresif */
 const looksLikeHtml=t=>/<\s*html|<!doctype/i.test(t);
 
 async function fetchWithTimeout(url,opt={},ms=FETCH_TIMEOUT_MS){
   const ctrl=new AbortController(); const id=setTimeout(()=>ctrl.abort(),ms);
-  try{ return await fetch(url,{...opt,signal:ctrl.signal,cache:'no-store',redirect:'follow'});} finally{ clearTimeout(id); }
-}
-
-/* ⚡ Ambil CSV secara paralel dari semua mirror; resolve yang tercepat */
-async function raceFetchCsv(url){
-  console.log('[fetch] mencoba:', url);
-  const candidates = wrapUrls(url).map(u=>{
-    const full = u + (u.includes('?')?'&':'?') + '_=' + Date.now();
-    return fetchWithTimeout(full).then(async r=>{
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      const text=await r.text();
-      if(!text || looksLikeHtml(text)) throw new Error('Bukan CSV / belum publik');
-      return text.replace(/^\uFEFF/,'');
-    });
-  });
   try{
-    const res = await Promise.any(candidates);
-    console.log('[fetch] OK');
-    return res;
-  }catch(agg){
-    console.error('[fetch] semua mirror gagal', agg);
-    throw new Error('Gagal ambil CSV dari semua mirror. Pastikan Sheet dibuka publik atau "Publish to the web".');
-  }
+    return await fetch(url+(url.includes('?')?'&':'?')+'_='+Date.now(),
+      {...opt,signal:ctrl.signal,cache:'no-store',redirect:'follow'});
+  }finally{ clearTimeout(id); }
 }
 
-/* ========= CACHE CSV (5 menit) ========= */
-const CACHE_KEY='csv_cache_v1';
-const CACHE_TTL_MS=5*60*1000;
+async function raceFetchCsvCandidates(cands){
+  const tasks=cands.map(u=>fetchWithTimeout(u).then(async r=>{
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const text=await r.text();
+    if(!text || looksLikeHtml(text)) throw new Error('HTML/Permission');
+    return text.replace(/^\uFEFF/,'');
+  }));
+  return Promise.any(tasks);
+}
+
+/* ========= CACHE CSV (30 menit) ========= */
+const CACHE_KEY='csv_cache_v2';
+const CACHE_TTL_MS=30*60*1000;
 function readCsvCache(){
-  try{ const j=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}'); if(j.t && (Date.now()-j.t)<CACHE_TTL_MS && typeof j.text==='string') return j.text; }catch(_){}
+  try{ const j=JSON.parse(localStorage.getItem(CACHE_KEY)||'{}');
+    if(j.t && (Date.now()-j.t)<CACHE_TTL_MS && typeof j.text==='string') return j.text;
+  }catch(_){}
   return null;
 }
 function writeCsvCache(text){ try{ localStorage.setItem(CACHE_KEY, JSON.stringify({t:Date.now(),text})); }catch(_){} }
@@ -572,7 +564,7 @@ let OPTIONS={month:[],day:[],minat:[],peng:[],pend:[],prov:[],kota:[],jobparent:
 let MULTI={month:new Set(),day:new Set(),minat:new Set(),peng:new Set(),pend:new Set(),prov:new Set(),kota:new Set(),jobparent:new Set(),jobtype:new Set(),cycle:new Set(),qualified:new Set(),searchJobs:new Set()};
 let JOB_OPTS=[];
 
-/* ===== helpers for header mapping ===== */
+/* ===== mapping helper ===== */
 function letterToIndex(letter){ const s=String(letter).toUpperCase().trim(); let n=0; for(let i=0;i<s.length;i++){ n=n*26+(s.charCodeAt(i)-64); } return n-1; }
 function headerByLetter(letter){ const idx=letterToIndex(letter); return HEADERS[idx]||null; }
 function findHeader(label){
@@ -585,6 +577,22 @@ function findHeader(label){
   return (scoreBest>=0.4)?best:null;
 }
 function getByLetter(row,letter){ const h=headerByLetter(letter); return h ? (row[h]??"") : ""; }
+
+const ALL_LABELS = Array.from(new Set([
+  ...TABLE_DISPLAY_COLUMNS, ...EXPORT_COLUMNS,
+  "USIA","PERIODE"
+]));
+function buildColMap(){
+  COL_MAP={};
+  ALL_LABELS.forEach(label=>{
+    const alias=ALIASES[label];
+    if(alias && typeof alias==='object' && alias.letter){
+      const h=headerByLetter(alias.letter); if(h){ COL_MAP[label]=h; return; }
+    }
+    const target=findHeader(label);
+    if(target) COL_MAP[label]=target;
+  });
+}
 function get(row,label){
   const alias=ALIASES[label];
   if(alias && typeof alias==='object' && alias.letter){ const via=getByLetter(row,alias.letter); if(via!=="" && via!=null) return via; }
@@ -600,118 +608,8 @@ function setStickyOffset(){
   document.documentElement.style.setProperty('--stickyOffset', px+'px');
 }
 
-/* ===== DATA VIEW (table) ===== */
-function buildColMap(){
-  COL_MAP={};
-  TABLE_DISPLAY_COLUMNS.forEach(label=>{
-    const alias=ALIASES[label];
-    if(alias && typeof alias==='object' && alias.letter){ const h=headerByLetter(alias.letter); if(h){ COL_MAP[label]=h; return; } }
-    const target=findHeader(label); if(target) COL_MAP[label]=target;
-  });
-  try{ console.table(Object.fromEntries(TABLE_DISPLAY_COLUMNS.map(k=>[k,COL_MAP[k]||'(N/A)']))); }catch(_){}
-}
+/* ===== DATA VIEW ===== */
 function buildColumns(){ const row=document.getElementById('thead-row'); row.innerHTML=""; TABLE_DISPLAY_COLUMNS.forEach((label,idx)=>{ const th=document.createElement("th"); th.textContent=label; if(idx===0) th.classList.add('sticky-col','col-name'); row.appendChild(th); }); }
-function fillSelect(sel,values,placeholder,disable=false){ sel.innerHTML=""; const o0=document.createElement("option");o0.value="";o0.textContent=placeholder;sel.appendChild(o0); values.forEach(v=>{const o=document.createElement("option");o.value=v.value;o.textContent=v.label??v.value;sel.appendChild(o);}); sel.disabled=disable; }
-function buildYearOptions(){
-  const yearsSet=new Set();
-  ROWS.forEach(r=>{
-    const ts = get(r,"TIMESTAMP") || get(r,{letter:'A'});
-    const d = parseDateParts(ts);
-    if(d && d.y) yearsSet.add(d.y);
-    else{
-      const per = String(get(r,{letter:'AA'})||'').match(/(20\d{2}|19\d{2})/);
-      if(per) yearsSet.add(+per[1]);
-    }
-  });
-  const years=[...yearsSet].sort((a,b)=>a-b).map(y=>({value:String(y),label:String(y)}));
-  fillSelect(document.getElementById("f-year"), years, "Semua Tahun", years.length===0);
-}
-const selectedYear=()=> parseInt(document.getElementById("f-year").value||"0",10) || null;
-function rebuildMonthDayOptions(){
-  const y=selectedYear();
-  const rowsY=ROWS.filter(r=>{
-    const ts=get(r,"TIMESTAMP")||get(r,{letter:'A'}); const P=parseDateParts(ts);
-    const yearFromPeriode = (String(get(r,{letter:'AA'})||'').match(/(20\d{2}|19\d{2})/)||[])[1];
-    const yy = P?.y ?? (yearFromPeriode?+yearFromPeriode:null);
-    return (!y || (yy===y));
-  });
-  const months=[...new Set( rowsY.map(r=>{
-    const P=parseDateParts(get(r,"TIMESTAMP")||get(r,{letter:'A'}));
-    return P?.m;
-  }))].filter(Boolean).sort((a,b)=>a-b);
-  OPTIONS.month=months; MULTI.month=new Set([...MULTI.month].filter(v=>OPTIONS.month.includes(v)));
-  const rowsYM=rowsY.filter(r=>{const P=parseDateParts(get(r,"TIMESTAMP")||get(r,{letter:'A'})); return MULTI.month.size?MULTI.month.has(P?.m):true;});
-  const days=[...new Set( rowsYM.map(r=>parseDateParts(get(r,"TIMESTAMP")||get(r,{letter:'A'}))?.d ) )].filter(Boolean).sort((a,b)=>a-b);
-  OPTIONS.day=days; MULTI.day=new Set([...MULTI.day].filter(v=>OPTIONS.day.includes(v)));
-}
-function subsetByDate(){
-  const y=selectedYear(),hasM=MULTI.month.size>0,hasD=MULTI.day.size>0, use=!!(y||hasM||hasD);
-  return ROWS.filter(r=>{
-    const ts=get(r,"TIMESTAMP")||get(r,{letter:'A'}); const P=parseDateParts(ts);
-    let yy=P?.y;
-    if(!yy){ const m=String(get(r,{letter:'AA'})||'').match(/(20\d{2}|19\d{2})/); if(m) yy=+m[1]; }
-    if(!use) return true;
-    if(y && yy!==y) return false;
-    if(hasM && !(P&&MULTI.month.has(P.m))) return false;
-    if(hasD && !(P&&MULTI.day.has(P.d))) return false;
-    return true;
-  });
-}
-function rebuildOtherFiltersFromDate(){
-  let base=subsetByDate(); if(MULTI.minat.size){base=base.filter(r=> MULTI.minat.has(String(val(r,FILTER_MAP.minat)||"").trim()));}
-  const sets={minat:new Set(),peng:new Set(),pend:new Set(),prov:new Set(),kota:new Set(),jobparent:new Set(),jobtype:new Set(),cycle:new Set(),qualified:new Set()};
-  subsetByDate().forEach(r=> sets.minat.add(String(val(r,FILTER_MAP.minat)||"").trim()) );
-  base.forEach(r=>{
-    sets.peng.add(String(val(r,FILTER_MAP.peng)||"").trim());
-    sets.pend.add(String(val(r,FILTER_MAP.pend)||"").trim());
-    sets.prov.add(String(val(r,FILTER_MAP.prov)||"").trim());
-    sets.kota.add(String(val(r,FILTER_MAP.kota)||"").trim());
-    sets.jobparent.add(String(val(r,FILTER_MAP.jobparent)||"").trim());
-    sets.jobtype.add(String(val(r,FILTER_MAP.jobtype)||"").trim());
-    sets.cycle.add(String(val(r,FILTER_MAP.cycle)||"").trim());
-    sets.qualified.add(String(val(r,FILTER_MAP.qualified)||"").trim());
-  });
-  OPTIONS.minat=[...sets.minat].filter(Boolean).sort();
-  for(const k of ['peng','pend','prov','kota','jobparent','jobtype','cycle','qualified']){
-    OPTIONS[k]=[...sets[k]].filter(Boolean).sort();
-    MULTI[k]=new Set([...MULTI[k]].filter(v=>OPTIONS[k].includes(v)));
-  }
-  rebuildJobOptions();
-}
-function rebuildJobOptions(){
-  const rows=subsetByDate(); const set=new Set();
-  rows.forEach(r=>{ ["MINAT POSISI KERJA PERTAMA","MINAT POSISI KERJA KEDUA","MINAT POSISI KERJA KETIGA"].forEach(col=>{ const v=String(get(r,col)||"").trim(); if(v) set.add(v); }); });
-  JOB_OPTS=[...set].sort((a,b)=>String(a).localeCompare(String(b)));
-}
-function filteredRows(){
-  let base=subsetByDate(); const has=k=>MULTI[k]&&MULTI[k].size>0;
-  if(has('minat')) base=base.filter(r=> MULTI.minat.has(String(val(r,FILTER_MAP.minat)||"").trim()));
-  if(has('peng'))  base=base.filter(r=> MULTI.peng.has(String(val(r,FILTER_MAP.peng)||"").trim()));
-  if(has('pend'))  base=base.filter(r=> MULTI.pend.has(String(val(r,FILTER_MAP.pend)||"").trim()));
-  if(has('prov'))  base=base.filter(r=> MULTI.prov.has(String(val(r,FILTER_MAP.prov)||"").trim()));
-  if(has('kota'))  base=base.filter(r=> MULTI.kota.has(String(val(r,FILTER_MAP.kota)||"").trim()));
-  if(has('jobparent')) base=base.filter(r=> MULTI.jobparent.has(String(val(r,FILTER_MAP.jobparent)||"").trim()));
-  if(has('jobtype'))   base=base.filter(r=> MULTI.jobtype.has(String(val(r,FILTER_MAP.jobtype)||"").trim()));
-  if(has('cycle'))     base=base.filter(r=> MULTI.cycle.has(String(val(r,FILTER_MAP.cycle)||"").trim()));
-  if(has('qualified')) base=base.filter(r=> MULTI.qualified.has(String(val(r,FILTER_MAP.qualified)||"").trim()));
-  if(has('searchJobs')){
-    const wanted=new Set([...MULTI.searchJobs].map(String));
-    base=base.filter(r=>
-      wanted.has(String(val(r,FILTER_MAP.minat)||"").trim()) ||
-      wanted.has(String(val(r,FILTER_MAP.minat2)||"").trim()) ||
-      wanted.has(String(val(r,FILTER_MAP.minat3)||"").trim())
-    );
-  }
-  return base;
-}
-function isFreshGraduate_row(r){
-  const dur=String(val(r,FILTER_MAP.durasi)).toLowerCase(), peng=String(val(r,FILTER_MAP.peng)).toLowerCase(), t=dur+" "+peng;
-  if(/fresh\s*graduate|freshgrad|fresh\b/.test(t)) return true;
-  if(/belum.*pengalaman|tanpa.*pengalaman|no.*experience/.test(t)) return true;
-  const m=dur.match(/(\d+(?:[.,]\d+)?)/); if(m){const v=parseFloat(m[1].replace(',','.')); if(v===0) return true; if(v>0) return false;}
-  if(!dur.trim() && (!peng.trim() || /-+|tidak|belum/.test(peng))) return true;
-  return false;
-}
 function renderStats(rows){
   const total=rows.length; let fresh=0; rows.forEach(r=>{if(isFreshGraduate_row(r)) fresh++;});
   document.getElementById("stat-total").textContent=total.toLocaleString('id-ID');
@@ -737,6 +635,64 @@ function renderTable(rows){
     tbody.appendChild(tr);
   });
   document.getElementById("prev").disabled=page<=0; document.getElementById("next").disabled=(start+PAGE_SIZE)>=rows.length; updatePageMini(rows.length);
+}
+function isFreshGraduate_row(r){
+  const dur=String(val(r,"DURASI PENGALAMAN KERJA")).toLowerCase(), peng=String(val(r,"PENGALAMAN KERJA TERAKHIR")).toLowerCase(), t=dur+" "+peng;
+  if(/fresh\s*graduate|freshgrad|fresh\b/.test(t)) return true;
+  if(/belum.*pengalaman|tanpa.*pengalaman|no.*experience/.test(t)) return true;
+  const m=dur.match(/(\d+(?:[.,]\d+)?)/); if(m){const v=parseFloat(m[1].replace(',','.')); if(v===0) return true; if(v>0) return false;}
+  if(!dur.trim() && (!peng.trim() || /-+|tidak|belum/.test(peng))) return true;
+  return false;
+}
+function subsetByDate(){
+  const y=parseInt(document.getElementById("f-year").value||'')||null;
+  const hasM=MULTI.month.size>0, hasD=MULTI.day.size>0, use=!!(y||hasM||hasD);
+  return ROWS.filter(r=>{
+    const ts=get(r,"TIMESTAMP")||get(r,{letter:'A'}); const P=parseDateParts(ts);
+    let yy=P?.y;
+    if(!yy){ const m=String(get(r,{letter:'AA'})||'').match(/(20\d{2}|19\d{2})/); if(m) yy=+m[1]; }
+    if(!use) return true;
+    if(y && yy!==y) return false;
+    if(hasM && !(P&&MULTI.month.has(P.m))) return false;
+    if(hasD && !(P&&MULTI.day.has(P.d))) return false;
+    return true;
+  });
+}
+function filteredRows(){
+  let base=subsetByDate(); const has=k=>MULTI[k]&&MULTI[k].size>0;
+  if(has('minat')) base=base.filter(r=> MULTI.minat.has(String(val(r,FILTER_MAP.minat)||"").trim()));
+  if(has('peng'))  base=base.filter(r=> MULTI.peng.has(String(val(r,FILTER_MAP.peng)||"").trim()));
+  if(has('pend'))  base=base.filter(r=> MULTI.pend.has(String(val(r,FILTER_MAP.pend)||"").trim()));
+  if(has('prov'))  base=base.filter(r=> MULTI.prov.has(String(val(r,FILTER_MAP.prov)||"").trim()));
+  if(has('kota'))  base=base.filter(r=> MULTI.kota.has(String(val(r,FILTER_MAP.kota)||"").trim()));
+  if(has('jobparent')) base=base.filter(r=> MULTI.jobparent.has(String(val(r,FILTER_MAP.jobparent)||"").trim()));
+  if(has('jobtype'))   base=base.filter(r=> MULTI.jobtype.has(String(val(r,FILTER_MAP.jobtype)||"").trim()));
+  if(has('cycle'))     base=base.filter(r=> MULTI.cycle.has(String(val(r,FILTER_MAP.cycle)||"").trim()));
+  if(has('qualified')) base=base.filter(r=> MULTI.qualified.has(String(val(r,FILTER_MAP.qualified)||"").trim()));
+  if(has('searchJobs')){
+    const wanted=new Set([...MULTI.searchJobs].map(String));
+    base=base.filter(r=>
+      wanted.has(String(val(r,FILTER_MAP.minat)||"").trim()) ||
+      wanted.has(String(val(r,FILTER_MAP.minat2)||"").trim()) ||
+      wanted.has(String(val(r,FILTER_MAP.minat3)||"").trim())
+    );
+  }
+  return base;
+}
+function buildYearOptions(){
+  const yearsSet=new Set();
+  ROWS.forEach(r=>{
+    const ts=get(r,"TIMESTAMP")||get(r,{letter:'A'});
+    const d=parseDateParts(ts);
+    if(d && d.y) yearsSet.add(d.y);
+    else{
+      const per=String(get(r,{letter:'AA'})||'').match(/(20\d{2}|19\d{2})/);
+      if(per) yearsSet.add(+per[1]);
+    }
+  });
+  const years=[...yearsSet].sort((a,b)=>a-b).map(y=>({value:String(y),label:String(y)}));
+  const sel=document.getElementById("f-year");
+  sel.innerHTML='<option value="">Semua Tahun</option>'+years.map(y=>`<option value="${y.value}">${y.label}</option>`).join('');
 }
 function recalcData(reset=true){const rows=filteredRows(); if(reset) page=0; renderStats(rows); buildColumns(); renderTable(rows);}
 
@@ -878,39 +834,33 @@ const Dash = (()=>{
 
   let dashRAF=0;
   function requestRecalc(){ cancelAnimationFrame(dashRAF); dashRAF=requestAnimationFrame(recalc); }
-
   function buildFilters(){
     const perSet=new Set();
     ROWS.forEach(r=>{ const v=String(get(r,{letter:'AA'}) || get(r,"PERIODE")).trim(); if(v) perSet.add(v); });
     const perArr=[...perSet].sort((a,b)=> monthToOrder(a)-monthToOrder(b) || String(a).localeCompare(String(b)));
     document.getElementById('df-periode').innerHTML='<option value="">Semua</option>'+perArr.map(p=>`<option>${p}</option>`).join('');
-
-    const yearSet=new Set();
-    ROWS.forEach(r=>{ const y=detectYear(r); if(y) yearSet.add(y); });
+    const yearSet=new Set(); ROWS.forEach(r=>{ const y=(function(ts,per){ const P=ts?parseDateParts(ts):null; if(P&&P.y) return P.y; const m=String(per||'').match(/(20\d{2}|19\d{2})/); return m?+m[1]:null; })(get(r,"TIMESTAMP"), get(r,{letter:'AA'})||get(r,"PERIODE")); if(y) yearSet.add(y); });
     const years=[...yearSet].sort((a,b)=>a-b);
     document.getElementById('df-year').innerHTML='<option value="">Semua</option>'+years.map(y=>`<option value="${y}">${y}</option>`).join('');
-
     document.getElementById('df-periode').addEventListener('change',requestRecalc);
     document.getElementById('df-year').addEventListener('change',requestRecalc);
   }
-
   return { buildFilters, requestRecalc };
 })();
 
-/* ===== BOOT ===== */
+/* ===== LOADER ===== */
 function hideLoader(){const el=document.getElementById('loader');if(!el) return;el.style.opacity="0";el.style.transition="opacity .25s ease";setTimeout(()=>{el.style.display="none";document.body.classList.add("ready");},250)}
 function showLoader(msg){const el=document.getElementById('loader'); if(!el) return; document.body.classList.remove('ready'); el.style.display='flex'; el.style.opacity='1'; document.getElementById('loader-sub').textContent=msg||'Memproses…';}
 function showLoaderError(msg){document.getElementById('loader-sub').textContent=msg||"Gagal memuat data."}
 
-/* ✅ PapaParse worker + fastMode */
+/* ===== PARSE CSV ===== */
 async function parseCsvToRows(csvText){
   return new Promise((resolve,reject)=>{
     Papa.parse(csvText.replace(/^\uFEFF/,''),{
       header:true, skipEmptyLines:'greedy', worker:true, fastMode:true,
       complete:(parsed)=>{
         try{
-          const headers=(parsed.meta.fields||[]).map(h=>String(h||'')
-            .replace(/[\u200B-\u200D\uFEFF\u00A0]/g,' ').replace(/\s+/g,' ').trim());
+          const headers=(parsed.meta.fields||[]).map(h=>String(h||'').replace(/[\u200B-\u200D\uFEFF\u00A0]/g,' ').replace(/\s+/g,' ').trim());
           const rows=(parsed.data||[]).map(r=>{const o={}; headers.forEach(h=>o[h]=r[h]); return o;});
           const MAP={}; headers.forEach(h=>MAP[norm(h)]=h);
           if(!headers.length) throw new Error('Header tidak terbaca (cek akses publik & nama sheet).');
@@ -922,32 +872,47 @@ async function parseCsvToRows(csvText){
   });
 }
 
+/* ===== LOAD DATA (FAST) ===== */
 async function loadData(){
-  const cached = readCsvCache();
+  const cached=readCsvCache();
   if(cached){
-    const parsed = await parseCsvToRows(cached);
+    const parsed=await parseCsvToRows(cached);
     if(parsed.rows.length) return { fields: parsed.headers, NAME_MAP: parsed.MAP, rows: parsed.rows, via:'cache' };
   }
   let lastErr=null;
   for(const name of SHEETS_TRY){
     try{
-      showLoader(`Mengambil data dari sheet "${name}"…`);
-      const url=gvizCsv(SHEET_ID,name);
-      const text=await raceFetchCsv(url);
+      showLoader(`Mengambil data (${name})…`);
+      const candidates=buildCsvCandidates(SHEET_ID,name);
+      const text=await raceFetchCsvCandidates(candidates);
       writeCsvCache(text);
       const parsed=await parseCsvToRows(text);
       if(!parsed.rows.length){ lastErr=new Error('CSV kosong'); continue; }
-      return { fields: parsed.headers, NAME_MAP: parsed.MAP, rows: parsed.rows, via:`gviz:${name}` };
+      return { fields: parsed.headers, NAME_MAP: parsed.MAP, rows: parsed.rows, via:name };
     }catch(e){ lastErr=e; }
   }
-  throw new Error(`Gagal muat: ${lastErr ? lastErr.message : 'unknown'}`);
+  throw new Error(`Gagal muat CSV: ${lastErr ? lastErr.message : 'unknown'}`);
 }
+
+/* ===== APPLY DATA (render cepat, sisanya idle) ===== */
 function applyData(result){
   HEADERS=result.fields; NAME_MAP=result.NAME_MAP; ROWS=result.rows;
-  page=0; buildColMap(); buildYearOptions(); rebuildMonthDayOptions(); rebuildOtherFiltersFromDate(); recalcData();
-  Dash.buildFilters(); Dash.requestRecalc();
-  setStickyOffset();
+  buildColMap();
+  buildYearOptions();
+  page=0;
+  // Render cepat: stats + tabel
+  recalcData(true);
+  // Sisanya dikerjakan saat thread idle
+  const later = window.requestIdleCallback || (fn=>setTimeout(fn,0));
+  later(()=>{
+    // (opsional) bangun opsi filter lanjutan
+    // di versi ringan ini cukup dashboard saja
+    Dash.buildFilters();
+    Dash.requestRecalc();
+    setStickyOffset();
+  });
 }
+
 async function boot(){
   try{
     const sess=localStorage.getItem('pipeline_user');
@@ -960,10 +925,8 @@ async function boot(){
     applyData(result); hideLoader(); DATA_LOADED=true;
   }catch(err){
     console.error(err);
-    showLoaderError(`Gagal memuat data: ${String(err.message||err)}. Pastikan Google Sheet sudah share "Anyone with the link" & "Publish to the web".`);
-    hideLoader();
-    DATA_LOADED=false;
-    showAuth();
+    showLoaderError(`Gagal memuat data: ${String(err.message||err)}. Pastikan Google Sheet sudah share "Anyone with the link" & (opsional) Publish to the web (CSV).`);
+    hideLoader(); DATA_LOADED=false; showAuth();
   }
 }
 
@@ -992,10 +955,7 @@ document.getElementById('download').addEventListener('click',()=>{
 /* ===== HOTFIX: global error handler & INIT aman ===== */
 window.addEventListener('error', (e)=>{
   console.error('[global error]', e?.message, e?.error);
-  try {
-    document.getElementById('loader').style.display = 'none';
-    document.getElementById('auth').style.display = 'grid';
-  } catch(_) {}
+  try { document.getElementById('loader').style.display='none'; document.getElementById('auth').style.display='grid'; } catch(_) {}
 });
 
 (function initSafe(){
